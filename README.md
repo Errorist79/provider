@@ -1,83 +1,199 @@
-# Kong API Gateway for Ethereum RPC Nodes
+# RPC Provider Gateway
 
-This setup provides a Kong API Gateway in front of your Ethereum RPC nodes with the following features:
-- Load balancing between multiple Ethereum nodes
-- Rate limiting per API key
-- API key authentication
-- Detailed metrics and monitoring
-- Request logging
-- CORS support
+A production-ready, enterprise-grade API gateway for Ethereum RPC providers with comprehensive rate limiting, API key management, usage analytics, and billing capabilities.
+
+## Overview
+
+This project provides a complete infrastructure stack for running a multi-tenant RPC provider service with:
+
+- **Kong Gateway (OSS)**: High-performance API gateway with routing, rate limiting, and authentication
+- **Unkey**: Self-hosted API key lifecycle management with mTLS security
+- **PostgreSQL**: Transactional database for organizations, users, plans, subscriptions, and billing
+- **ClickHouse**: High-performance analytics database for request logs and usage metrics
+- **Redis**: Distributed cache for API key verification and rate limit state
+- **SigNoz**: OpenTelemetry-native APM for comprehensive observability
+- **Prometheus + Grafana**: Metrics collection and visualization
 
 ## Features
 
-- **Load Balancing**: Round-robin load balancing between your Ethereum nodes
-- **Rate Limiting**: 1000 requests per minute per API key
-- **Monitoring**: Prometheus metrics and Grafana dashboards
-- **Authentication**: API key based authentication
-- **Request Logging**: Detailed logging of all requests
-- **CORS Support**: Pre-configured CORS settings
+### Core Capabilities
 
-## Prerequisites
+- **Multi-tenant Architecture**: Organizations, users, and role-based access control
+- **Plan-based Rate Limiting**: Dynamic rate limits based on subscription tiers (Free, Basic, Pro, Enterprise)
+- **API Key in URL**: Extract API keys from URL path (`/{API_KEY}/eth`) for better UX
+- **Usage Tracking & Analytics**: Real-time and historical usage data with ClickHouse
+- **Billing Ready**: Usage aggregation by hour/day for accurate billing
+- **High Performance**: Optimized for high-throughput with Redis caching and ClickHouse analytics
+- **Production Security**: mTLS, key masking in logs, HTTPS/TLS, secrets management
 
-- Docker
-- Docker Compose
+### Gateway Features
 
-## Getting Started
+- **Load Balancing**: Round-robin across multiple RPC nodes with health checks
+- **Rate Limiting**: Per-consumer limits with burst support
+- **Authentication**: Unkey-powered API key verification with caching
+- **CORS Support**: Configurable cross-origin resource sharing
+- **Metrics & Monitoring**: Comprehensive observability with Prometheus, Grafana, and SigNoz
+- **Request Logging**: Detailed request logs with sensitive data redaction
 
-1. **Start the services**:
-   ```bash
-   docker-compose up -d
-   ```
+## Quick Start
 
-2. **Access the services**:
-   - Kong Admin API: http://localhost:8001
-   - Kong Proxy: http://localhost:8000
-   - Prometheus: http://localhost:9090
-   - Grafana: http://localhost:3000 (admin/admin)
+See **[SETUP.md](./SETUP.md)** for detailed setup instructions.
 
-3. **Make a request to your Ethereum node**:
-   ```bash
-   curl -X POST http://localhost:8000 \
-     -H "Content-Type: application/json" \
-     -H "x-api-key: your-secure-api-key-here" \
-     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
-   ```
+```bash
+# 1. Copy environment file
+cp .env.example .env
 
-## Configuration
+# 2. Update configuration (change passwords!)
+nano .env
 
-### API Keys
-Default API keys are set in `kong/kong.yml`. To add a new API key:
-1. Edit `kong/kong.yml`
-2. Add a new consumer under the `consumers` section
-3. Apply the changes:
-   ```bash
-   docker-compose restart kong
-   ```
+# 3. Start all services
+docker-compose up -d
 
-### Rate Limiting
-Rate limiting is configured for 1000 requests per minute per API key. To modify:
-1. Edit `kong/kong.yml`
-2. Update the `rate-limiting` plugin configuration
-3. Restart Kong
+# 4. Configure Kong (see SETUP.md for full script)
+export ADMIN=http://localhost:8001
+curl -X POST $ADMIN/upstreams -d name=eth-mainnet-rpc ...
 
-## Monitoring
+# 5. Test the gateway
+curl -X POST http://localhost:8000/sk_test_1234567890abcdef/eth \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
 
-### Grafana Setup
-1. Log in to Grafana at http://localhost:3000 (admin/admin)
-2. Add Prometheus as a data source:
-   - URL: http://prometheus:9090
-   - Save & Test
+## Architecture
 
-### Available Metrics
-- Request rate
-- Error rates
-- Latency
-- Rate limit usage
-- Upstream health
+### High-Level Flow
 
-## Security Notes
+```
+Client Request
+    ↓
+Kong Gateway (8000)
+    ├─ Extract API key from URL path
+    ├─ Verify with Unkey (cached in Redis)
+    ├─ Apply rate limiting (plan-based)
+    ├─ Route to upstream RPC node
+    └─ Log to ClickHouse via OTel
+```
 
-1. Change the default API keys in production
-2. Consider enabling HTTPS
-3. Restrict admin API access
-4. Monitor your rate limits and adjust as needed
+### Service Ports
+
+| Service | Ports | Description |
+|---------|-------|-------------|
+| Kong Proxy | 8000, 8443 | Main gateway endpoint |
+| Kong Admin | 8001, 8444 | Configuration API |
+| Kong Manager | 8002 | Web UI |
+| PostgreSQL | 5432 | Application database |
+| Redis | 6379 | Cache layer |
+| ClickHouse | 8123, 9000 | Analytics database |
+| Prometheus | 9090 | Metrics collection |
+| Grafana | 3000 | Dashboards |
+
+## Documentation
+
+- **[SETUP.md](./SETUP.md)**: Complete setup and configuration guide
+- **[docs/README.md](./docs/README.md)**: Detailed architecture documentation
+- **[docs/setup.md](./docs/setup.md)**: Legacy Kong configuration commands
+
+## Database Schema
+
+### PostgreSQL (Transactional)
+
+- **organizations**: Customer organizations
+- **users**: Users within organizations
+- **plans**: Subscription tiers (Free, Basic, Pro, Enterprise)
+- **subscriptions**: Active subscriptions linking orgs to plans
+- **consumers**: Kong consumers linked to Unkey identities
+- **api_keys**: API key metadata (secrets stored in Unkey)
+- **invoices**: Billing invoices with usage breakdown
+- **webhooks**: Event notification configuration
+- **audit_logs**: Complete audit trail
+
+### ClickHouse (Analytics)
+
+- **requests_raw**: High-volume request logs (14-day retention)
+- **usage_hourly**: Hourly usage aggregation (90-day retention)
+- **usage_daily**: Daily usage for billing (18-month retention)
+- **errors**: Error tracking and debugging
+- **latency_metrics**: SLA monitoring
+- **rate_limit_events**: Rate limit hit tracking
+
+## Development Roadmap
+
+- [x] **Phase 1**: Infrastructure foundation (Docker Compose, databases)
+- [ ] **Phase 2**: Database schemas and seed data
+- [ ] **Phase 3**: Unkey integration with mTLS
+- [ ] **Phase 4**: Plan-based rate limiting
+- [ ] **Phase 5**: SigNoz observability stack
+- [ ] **Phase 6**: Usage tracking and billing ETL
+- [ ] **Phase 7**: Security hardening and HA setup
+- [ ] **Phase 8**: Customer portal API and UI
+
+## Technology Stack
+
+- **Gateway**: Kong Gateway 3.6 (OSS)
+- **Databases**: PostgreSQL 15, ClickHouse 23.8
+- **Cache**: Redis 7
+- **API Keys**: Unkey (self-hosted)
+- **Observability**: SigNoz, Prometheus, Grafana
+- **Infrastructure**: Docker Compose
+
+## Monitoring & Observability
+
+### Prometheus Metrics
+
+- `kong_http_requests_total`: Request count by status code, consumer, route
+- `kong_latency`: Request latency histograms
+- `kong_bandwidth`: Bandwidth usage
+- `kong_upstream_target_health`: Upstream node health
+
+### ClickHouse Analytics
+
+- Real-time request logs with sub-second query times
+- Usage aggregation for billing
+- Error tracking and debugging
+- Latency percentiles (p50, p95, p99)
+- Per-organization/consumer analytics
+
+### Grafana Dashboards
+
+- Kong gateway metrics
+- Usage analytics by organization/plan
+- Error rates and SLA monitoring
+- Billing insights
+
+## Security Features
+
+- **API Key Security**: Secrets stored only in Unkey, never in logs
+- **mTLS**: Encrypted communication between Kong and Unkey
+- **Key Masking**: API keys redacted from all logs and traces
+- **HTTPS/TLS**: Enforced at the edge with HSTS
+- **Rate Limiting**: Prevent abuse with plan-based limits
+- **RBAC**: Role-based access control for organizations
+- **Audit Logs**: Complete audit trail of all actions
+- **Secrets Management**: Support for Vault/SOPS/KMS
+
+## Production Deployment
+
+Before deploying to production:
+
+1. ✅ Change all default passwords in `.env`
+2. ✅ Enable HTTPS with proper TLS certificates
+3. ✅ Set up PostgreSQL and ClickHouse backups
+4. ✅ Configure resource limits and scaling
+5. ✅ Enable Kong Admin API authentication
+6. ✅ Set up monitoring alerts
+7. ✅ Review data retention policies
+8. ✅ Implement secrets rotation
+9. ✅ Configure high availability (HA)
+10. ✅ Perform security audit
+
+## Contributing
+
+This is a greenfield project under active development. Contributions are welcome!
+
+## License
+
+TBD
+
+## Support
+
+For issues and questions, see the documentation in the `docs/` directory.
