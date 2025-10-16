@@ -74,6 +74,7 @@ Kong Gateway (8000)
 | Kong Proxy | 8000, 8443 | Main gateway endpoint |
 | Kong Admin | 8001, 8444 | Configuration API |
 | Kong Manager | 8002 | Web UI |
+| Unkey | 3001 | API key management |
 | PostgreSQL | 5432 | Application database |
 | Redis | 6379 | Cache layer |
 | ClickHouse | 8123, 9000 | Analytics database |
@@ -85,15 +86,18 @@ Kong Gateway (8000)
 ```bash
 # 1. Setup environment
 cp .env.example .env
-# Edit .env and change passwords
+# Edit .env and change all passwords!
 
 # 2. Start all services
 docker-compose up -d
 
-# 3. Configure Kong for multichain
+# 3. Initialize Unkey
+./scripts/setup-unkey.sh
+
+# 4. Configure Kong for multichain
 ./scripts/setup-kong.sh
 
-# 4. Verify setup
+# 5. Verify setup
 ./scripts/health-check.sh
 ```
 
@@ -131,14 +135,15 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 
 ## Key Scripts
 
-- `./scripts/setup-kong.sh` - Configure Kong for all chains
+- `./scripts/setup-unkey.sh` - Initialize Unkey workspace and create test key
+- `./scripts/setup-kong.sh` - Configure Kong for all chains with Unkey auth
 - `./scripts/stats.sh` - View usage statistics and health
 - `./scripts/health-check.sh` - Check all services
 
 ## Development Roadmap
 
 - [x] **Phase 1-2**: Infrastructure + multichain support
-- [ ] **Phase 3**: Unkey integration with mTLS
+- [x] **Phase 3**: Unkey integration with Redis caching
 - [ ] **Phase 4**: Plan-based dynamic rate limiting
 - [ ] **Phase 5**: SigNoz observability
 - [ ] **Phase 6**: Usage tracking and billing

@@ -201,22 +201,33 @@ services:
       - clickhouse
 
   # ============================================================================
-  # Unkey (Self-hosted API key management) - Placeholder
+  # Unkey (Self-hosted API key management)
   # ============================================================================
-  # unkey:
-  #   image: unkey/unkey:latest
-  #   container_name: unkey
-  #   environment:
-  #     DATABASE_URL: postgresql://${APP_DB_USER}:${APP_DB_PASSWORD}@app-database:5432/${APP_DB_NAME}
-  #     REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-  #   ports:
-  #     - "${UNKEY_PORT:-3001}:3000"
-  #   networks:
-  #     - rpc-gateway-net
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - app-database
-  #     - redis
+  unkey:
+    image: chronark/unkey:latest
+    container_name: unkey
+    environment:
+      DATABASE_URL: postgresql://${APP_DB_USER:-rpcuser}:${APP_DB_PASSWORD:-rpcpass}@app-database:5432/${APP_DB_NAME:-rpc_gateway}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redispass}@redis:6379
+      UNKEY_PORT: "3000"
+      UNKEY_BASE_URL: ${UNKEY_BASE_URL:-http://localhost:3001}
+      # Root key for initial setup (change in production!)
+      UNKEY_ROOT_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
+    ports:
+      - "${UNKEY_PORT:-3001}:3000"
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+    depends_on:
+      app-database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:3000/api/v1/liveness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ============================================================================
   # SigNoz (OTel-native APM) - Placeholder for Phase 5

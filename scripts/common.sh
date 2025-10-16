@@ -35,32 +35,21 @@ check_kong_health() {
 add_route_plugins() {
     local route_id=$1
 
-    # Pre-function plugin
-    read -r -d '' LUA_CODE << 'EOF' || true
-local uri = kong.request.get_path()
-local m = ngx.re.match(uri, [[^/([^/]+)/[^/]+$]], "jo")
-if m and m[1] then
-  ngx.req.set_header("apikey", m[1])
-  kong.service.request.set_path("/")
-  kong.log.set_serialize_value("request.headers.apikey", "[REDACTED]")
-else
-  return kong.response.exit(400, {message = "Invalid path"})
-end
-EOF
+    # Pre-function plugin with Unkey verification
+    local LUA_CODE=$(cat "$(dirname "$0")/../config/kong-unkey-prefunction.lua" | sed 's/"/\\"/g' | tr '\n' ' ')
 
     curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
         -H 'Content-Type: application/json' \
         -d "{\"name\":\"pre-function\",\"config\":{\"access\":[\"$LUA_CODE\"]}}" | jq -r '.name // "exists"'
 
-    # Key-auth
-    curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
-        -d 'name=key-auth' \
-        -d 'config.key_names[]=apikey' | jq -r '.name // "exists"'
-
-    # Rate limiting
+    # Rate limiting (consumer-based after Unkey auth)
     curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
         -d 'name=rate-limiting' \
-        -d 'config.minute=1000' | jq -r '.name // "exists"'
+        -d 'config.minute=10000' \
+        -d 'config.policy=redis' \
+        -d "config.redis.host=${REDIS_HOST:-redis}" \
+        -d "config.redis.port=${REDIS_PORT:-6379}" \
+        -d "config.redis.password=${REDIS_PASSWORD}" | jq -r '.name // "exists"'
 
     # CORS
     curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \

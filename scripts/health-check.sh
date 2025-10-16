@@ -10,6 +10,7 @@ echo ""
 # Check services
 check_service "Kong Admin" "$ADMIN/" || true
 check_service "Kong Proxy" "$PROXY/" || true
+check_service "Unkey" "http://localhost:3001/api/v1/liveness" || true
 check_service "Prometheus" "http://localhost:9090/-/healthy" || true
 check_service "Grafana" "http://localhost:3000/api/health" || true
 check_service "ClickHouse" "http://localhost:8123/ping" || true
