@@ -84,6 +84,7 @@ Kong Gateway (8000)
 | Grafana | 3000 | Dashboards |
 | SigNoz | 3301 | APM & Observability |
 | OTel Collector | 4317, 4318 | OpenTelemetry ingestion |
+| Gateway API | 4000 | Usage Analytics API |
 
 ## Quick Start
 
@@ -124,7 +125,7 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 - **subscriptions**: Active subscriptions linking orgs to plans
 - **consumers**: Kong consumers linked to Unkey identities
 - **api_keys**: API key metadata (secrets stored in Unkey)
-- **invoices**: Billing invoices with usage breakdown
+- **invoices**: Billing invoices (placeholder - full billing system coming later)
 - **webhooks**: Event notification configuration
 - **audit_logs**: Complete audit trail
 
@@ -151,8 +152,10 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 - [x] **Phase 3**: Unkey integration with Redis caching
 - [x] **Phase 4**: Plan-based dynamic rate limiting + compute units
 - [x] **Phase 5**: SigNoz observability with OpenTelemetry
-- [ ] **Phase 6**: Usage tracking and billing ETL
-- [ ] **Phase 7**: Security hardening and HA
+- [x] **Phase 6**: Usage tracking API (basic analytics)
+- [ ] **Phase 7**: Get everything working end-to-end
+- [ ] **Phase 8**: Security hardening and HA
+- [ ] **Phase 9**: Full billing system (see docs/BILLING.md)
 
 ## Technology Stack
 
