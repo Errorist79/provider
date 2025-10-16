@@ -68,6 +68,12 @@ CREATE TABLE plans (
     -- Features
     features JSONB DEFAULT '{}',
 
+    -- Chain access (multichain support)
+    allowed_chains JSONB DEFAULT '["*"]', -- ["*"] = all chains, or specific list
+    archive_access BOOLEAN DEFAULT false,
+    trace_access BOOLEAN DEFAULT false,
+    websocket_access BOOLEAN DEFAULT true,
+
     -- Status
     is_active BOOLEAN DEFAULT true,
     is_public BOOLEAN DEFAULT true,
@@ -80,11 +86,11 @@ CREATE INDEX idx_plans_slug ON plans(slug);
 CREATE INDEX idx_plans_active ON plans(is_active);
 
 -- Insert default plans
-INSERT INTO plans (name, slug, description, rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day, price_monthly, price_yearly, features) VALUES
-('Free', 'free', 'Free tier for testing and development', 100, 5000, 100000, 0, 0, '{"support": "community", "sla": false}'),
-('Basic', 'basic', 'Basic tier for small projects', 1000, 50000, 1000000, 29, 290, '{"support": "email", "sla": false}'),
-('Pro', 'pro', 'Professional tier for growing businesses', 10000, 500000, 10000000, 99, 990, '{"support": "priority", "sla": true, "custom_limits": true}'),
-('Enterprise', 'enterprise', 'Enterprise tier with custom limits', 100000, 5000000, 100000000, NULL, NULL, '{"support": "dedicated", "sla": true, "custom_limits": true, "white_label": true}');
+INSERT INTO plans (name, slug, description, rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day, price_monthly, price_yearly, features, allowed_chains, archive_access, trace_access, websocket_access) VALUES
+('Free', 'free', 'Free tier for testing and development', 100, 5000, 100000, 0, 0, '{"support": "community", "sla": false}', '["*"]', false, false, true),
+('Basic', 'basic', 'Basic tier for small projects', 1000, 50000, 1000000, 29, 290, '{"support": "email", "sla": false}', '["*"]', false, false, true),
+('Pro', 'pro', 'Professional tier for growing businesses', 10000, 500000, 10000000, 99, 990, '{"support": "priority", "sla": true, "custom_limits": true}', '["*"]', true, true, true),
+('Enterprise', 'enterprise', 'Enterprise tier with custom limits', 100000, 5000000, 100000000, NULL, NULL, '{"support": "dedicated", "sla": true, "custom_limits": true, "white_label": true}', '["*"]', true, true, true);
 
 -- ============================================================================
 -- Subscriptions
@@ -163,6 +169,10 @@ CREATE TABLE api_keys (
 
     -- Expiration
     expires_at TIMESTAMP WITH TIME ZONE,
+
+    -- Chain restrictions (multichain support)
+    allowed_chains JSONB DEFAULT '["*"]', -- Restrict to specific chains
+    restricted_methods JSONB DEFAULT '[]', -- Block specific RPC methods
 
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS requests_raw (
     api_key_prefix String CODEC(ZSTD(1)),
     plan_slug String CODEC(ZSTD(1)),
 
+    -- Chain information (MULTICHAIN SUPPORT)
+    chain_slug String CODEC(ZSTD(1)),
+    chain_type String CODEC(ZSTD(1)),
+    chain_id String CODEC(ZSTD(1)),
+
     -- Response
     status_code UInt16 CODEC(T64, LZ4),
     response_size UInt32 CODEC(T64, LZ4),
@@ -46,6 +51,7 @@ CREATE TABLE IF NOT EXISTS requests_raw (
     -- RPC specific (for Ethereum/EVM RPCs)
     rpc_method String CODEC(ZSTD(1)),
     rpc_id String CODEC(ZSTD(1)),
+    compute_units UInt32 CODEC(T64, LZ4),
 
     -- Error tracking
     error_message String CODEC(ZSTD(1)),
@@ -56,15 +62,17 @@ CREATE TABLE IF NOT EXISTS requests_raw (
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)
-ORDER BY (timestamp, organization_id, consumer_id, status_code)
+ORDER BY (timestamp, chain_slug, organization_id, consumer_id, status_code)
 TTL timestamp + INTERVAL 14 DAY  -- Keep raw data for 14 days
 SETTINGS index_granularity = 8192;
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_consumer ON requests_raw (consumer_id) TYPE bloom_filter(0.01);
 CREATE INDEX IF NOT EXISTS idx_org ON requests_raw (organization_id) TYPE bloom_filter(0.01);
+CREATE INDEX IF NOT EXISTS idx_chain ON requests_raw (chain_slug) TYPE bloom_filter(0.01);
 CREATE INDEX IF NOT EXISTS idx_error ON requests_raw (is_error) TYPE set(2);
 CREATE INDEX IF NOT EXISTS idx_status ON requests_raw (status_code) TYPE set(100);
+CREATE INDEX IF NOT EXISTS idx_rpc_method ON requests_raw (rpc_method) TYPE bloom_filter(0.01);
 
 -- ============================================================================
 -- Hourly Usage Aggregation (Medium retention)
@@ -76,12 +84,15 @@ CREATE TABLE IF NOT EXISTS usage_hourly (
     organization_id String CODEC(ZSTD(1)),
     consumer_id String CODEC(ZSTD(1)),
     plan_slug String CODEC(ZSTD(1)),
+    chain_slug String CODEC(ZSTD(1)),
+    chain_type String CODEC(ZSTD(1)),
     route_name String CODEC(ZSTD(1)),
     rpc_method String CODEC(ZSTD(1)),
 
     -- Metrics
     request_count UInt64 CODEC(T64, LZ4),
     error_count UInt64 CODEC(T64, LZ4),
+    compute_units_used UInt64 CODEC(T64, LZ4),
 
     -- Success by status code
     status_2xx_count UInt64 CODEC(T64, LZ4),
@@ -104,7 +115,7 @@ CREATE TABLE IF NOT EXISTS usage_hourly (
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(hour)
-ORDER BY (hour, organization_id, consumer_id, plan_slug, route_name, rpc_method)
+ORDER BY (hour, chain_slug, organization_id, consumer_id, plan_slug, route_name, rpc_method)
 TTL hour + INTERVAL 90 DAY  -- Keep hourly data for 90 days
 SETTINGS index_granularity = 8192;
 
@@ -117,11 +128,14 @@ SELECT
     organization_id,
     consumer_id,
     plan_slug,
+    chain_slug,
+    chain_type,
     route_name,
     rpc_method,
 
     count() as request_count,
     countIf(is_error = 1) as error_count,
+    sum(compute_units) as compute_units_used,
 
     countIf(status_code >= 200 AND status_code < 300) as status_2xx_count,
     countIf(status_code >= 400 AND status_code < 500) as status_4xx_count,
@@ -143,6 +157,8 @@ GROUP BY
     organization_id,
     consumer_id,
     plan_slug,
+    chain_slug,
+    chain_type,
     route_name,
     rpc_method;
 
@@ -156,10 +172,12 @@ CREATE TABLE IF NOT EXISTS usage_daily (
     organization_id String CODEC(ZSTD(1)),
     consumer_id String CODEC(ZSTD(1)),
     plan_slug String CODEC(ZSTD(1)),
+    chain_slug String CODEC(ZSTD(1)),
 
     -- Metrics
     request_count UInt64 CODEC(T64, LZ4),
     error_count UInt64 CODEC(T64, LZ4),
+    compute_units_used UInt64 CODEC(T64, LZ4),
 
     status_2xx_count UInt64 CODEC(T64, LZ4),
     status_4xx_count UInt64 CODEC(T64, LZ4),
@@ -177,7 +195,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(date)
-ORDER BY (date, organization_id, consumer_id, plan_slug)
+ORDER BY (date, chain_slug, organization_id, consumer_id, plan_slug)
 TTL date + INTERVAL 540 DAY  -- Keep daily data for 18 months
 SETTINGS index_granularity = 8192;
 
@@ -190,9 +208,11 @@ SELECT
     organization_id,
     consumer_id,
     plan_slug,
+    chain_slug,
 
     sum(request_count) as request_count,
     sum(error_count) as error_count,
+    sum(compute_units_used) as compute_units_used,
 
     sum(status_2xx_count) as status_2xx_count,
     sum(status_4xx_count) as status_4xx_count,
@@ -210,7 +230,8 @@ GROUP BY
     date,
     organization_id,
     consumer_id,
-    plan_slug;
+    plan_slug,
+    chain_slug;
 
 -- ============================================================================
 -- Error Tracking (Detailed error logs)
@@ -222,6 +243,7 @@ CREATE TABLE IF NOT EXISTS errors (
     -- Context
     organization_id String CODEC(ZSTD(1)),
     consumer_id String CODEC(ZSTD(1)),
+    chain_slug String CODEC(ZSTD(1)),
 
     -- Error details
     error_type String CODEC(ZSTD(1)),
