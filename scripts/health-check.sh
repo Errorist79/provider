@@ -14,6 +14,8 @@ check_service "Unkey" "http://localhost:3001/api/v1/liveness" || true
 check_service "Prometheus" "http://localhost:9090/-/healthy" || true
 check_service "Grafana" "http://localhost:3000/api/health" || true
 check_service "ClickHouse" "http://localhost:8123/ping" || true
+check_service "SigNoz" "http://localhost:3301/" || true
+check_service "OTel Collector" "http://localhost:13133/" || true
 
 # Check databases
 if docker-compose exec -T app-database pg_isready -U rpcuser >/dev/null 2>&1; then

@@ -82,6 +82,8 @@ Kong Gateway (8000)
 | ClickHouse | 8123, 9000 | Analytics database |
 | Prometheus | 9090 | Metrics collection |
 | Grafana | 3000 | Dashboards |
+| SigNoz | 3301 | APM & Observability |
+| OTel Collector | 4317, 4318 | OpenTelemetry ingestion |
 
 ## Quick Start
 
@@ -148,8 +150,8 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 - [x] **Phase 1-2**: Infrastructure + multichain support
 - [x] **Phase 3**: Unkey integration with Redis caching
 - [x] **Phase 4**: Plan-based dynamic rate limiting + compute units
-- [ ] **Phase 5**: SigNoz observability
-- [ ] **Phase 6**: Usage tracking and billing
+- [x] **Phase 5**: SigNoz observability with OpenTelemetry
+- [ ] **Phase 6**: Usage tracking and billing ETL
 - [ ] **Phase 7**: Security hardening and HA
 
 ## Technology Stack

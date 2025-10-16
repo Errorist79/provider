@@ -5,7 +5,7 @@ services:
   # Kong Gateway + Database
   # ============================================================================
   kong-database:
-    image: postgres:13
+    image: postgres:15
     container_name: kong-database
     environment:
       POSTGRES_USER: ${KONG_DB_USER:-kong}
@@ -62,9 +62,10 @@ services:
       KONG_STATUS_LISTEN: 0.0.0.0:8100
       KONG_ADMIN_GUI_AUTH: basic-auth
       KONG_ADMIN_GUI_SESSION_CONF: '{"secret":"${KONG_ADMIN_SESSION_SECRET:-secret}","storage":"kong","cookie_secure":false}'
-      # OpenTelemetry configuration (for future SigNoz integration)
+      # OpenTelemetry configuration
       KONG_TRACING_INSTRUMENTATIONS: all
       KONG_TRACING_SAMPLING_RATE: ${KONG_TRACING_RATE:-1.0}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     ports:
       - "${KONG_PROXY_PORT:-8000}:8000"      # Proxy HTTP
       - "${KONG_ADMIN_PORT:-8001}:8001"      # Admin API
@@ -242,10 +243,67 @@ services:
       retries: 5
 
   # ============================================================================
-  # SigNoz (OTel-native APM) - Placeholder for Phase 5
+  # OpenTelemetry Collector (for SigNoz)
   # ============================================================================
-  # For SigNoz, we'll use their official docker-compose setup
-  # and integrate it with our ClickHouse instance
+  otel-collector:
+    image: signoz/signoz-otel-collector:${SIGNOZ_VERSION:-0.88.11}
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./monitoring/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=rpc-gateway
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  # ============================================================================
+  # SigNoz Query Service
+  # ============================================================================
+  signoz-query-service:
+    image: signoz/query-service:${SIGNOZ_VERSION:-0.38.0}
+    container_name: signoz-query-service
+    command: ["-config=/root/config/prometheus.yml"]
+    volumes:
+      - ./monitoring/signoz/prometheus.yml:/root/config/prometheus.yml
+      - signoz_data:/var/lib/signoz
+    environment:
+      - ClickHouseUrl=tcp://clickhouse:9000
+      - STORAGE=clickhouse
+      - GODEBUG=netdns=go
+      - TELEMETRY_ENABLED=false
+    ports:
+      - "8080:8080"
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+  # ============================================================================
+  # SigNoz Frontend
+  # ============================================================================
+  signoz-frontend:
+    image: signoz/frontend:${SIGNOZ_VERSION:-0.38.0}
+    container_name: signoz-frontend
+    environment:
+      - FRONTEND_API_ENDPOINT=http://signoz-query-service:8080
+    ports:
+      - "${SIGNOZ_PORT:-3301}:3301"
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+    depends_on:
+      - signoz-query-service
 
 networks:
   rpc-gateway-net:
@@ -259,3 +317,4 @@ volumes:
   clickhouse_data:
   prometheus_data:
   grafana_data:
+  signoz_data:

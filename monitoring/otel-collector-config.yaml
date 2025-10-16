@@ -1,0 +1,93 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Prometheus receiver for Kong metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'kong'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['kong:8100']
+
+processors:
+  # Batch processor for performance
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+  # Resource detection
+  resourcedetection:
+    detectors: [env, system, docker]
+    timeout: 5s
+
+  # Add custom attributes for RPC tracking
+  attributes:
+    actions:
+      - key: service.name
+        value: rpc-gateway
+        action: upsert
+      - key: deployment.environment
+        value: ${ENVIRONMENT}
+        action: upsert
+
+  # Extract RPC-specific attributes from headers
+  transform:
+    trace_statements:
+      - context: span
+        statements:
+          - set(attributes["rpc.method"], attributes["http.request.header.x-rpc-method"])
+          - set(attributes["rpc.chain"], attributes["http.request.header.x-chain"])
+          - set(attributes["rpc.plan"], attributes["http.request.header.x-plan"])
+          - set(attributes["rpc.organization_id"], attributes["http.request.header.x-organization-id"])
+          - set(attributes["rpc.compute_units"], attributes["http.request.header.x-compute-units"])
+
+exporters:
+  # ClickHouse exporter for traces
+  clickhouse:
+    endpoint: tcp://clickhouse:9000?database=signoz_traces
+    ttl: 168h  # 7 days
+    traces_table_name: signoz_traces
+    timeout: 10s
+
+  # ClickHouse exporter for metrics
+  clickhousemetricswrite:
+    endpoint: tcp://clickhouse:9000?database=signoz_metrics
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  # Logging exporter for debugging
+  logging:
+    loglevel: info
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [batch, resourcedetection, attributes, transform]
+      exporters: [clickhouse, logging]
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [batch, resourcedetection, attributes]
+      exporters: [clickhousemetricswrite]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [batch, resourcedetection, attributes]
+      exporters: [clickhouse]
+
+  extensions: []
+  telemetry:
+    logs:
+      level: info
