@@ -35,28 +35,21 @@ This project provides a complete infrastructure stack for running a multi-tenant
 - **Metrics & Monitoring**: Comprehensive observability with Prometheus, Grafana, and SigNoz
 - **Request Logging**: Detailed request logs with sensitive data redaction
 
-## Quick Start
-
-See **[SETUP.md](./SETUP.md)** for detailed setup instructions.
+## Usage Example
 
 ```bash
-# 1. Copy environment file
-cp .env.example .env
-
-# 2. Update configuration (change passwords!)
-nano .env
-
-# 3. Start all services
-docker-compose up -d
-
-# 4. Configure Kong (see SETUP.md for full script)
-export ADMIN=http://localhost:8001
-curl -X POST $ADMIN/upstreams -d name=eth-mainnet-rpc ...
-
-# 5. Test the gateway
-curl -X POST http://localhost:8000/sk_test_1234567890abcdef/eth \
+# Test Ethereum Mainnet
+curl -X POST http://localhost:8000/YOUR_API_KEY/eth-mainnet \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+# Test Arbitrum
+curl -X POST http://localhost:8000/YOUR_API_KEY/arb-mainnet \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
+
+# Check stats
+./scripts/stats.sh
 ```
 
 ## Architecture
@@ -87,11 +80,31 @@ Kong Gateway (8000)
 | Prometheus | 9090 | Metrics collection |
 | Grafana | 3000 | Dashboards |
 
-## Documentation
+## Quick Start
 
-- **[SETUP.md](./SETUP.md)**: Complete setup and configuration guide
-- **[docs/README.md](./docs/README.md)**: Detailed architecture documentation
-- **[docs/setup.md](./docs/setup.md)**: Legacy Kong configuration commands
+```bash
+# 1. Setup environment
+cp .env.example .env
+# Edit .env and change passwords
+
+# 2. Start all services
+docker-compose up -d
+
+# 3. Configure Kong for multichain
+./scripts/setup-kong.sh
+
+# 4. Verify setup
+./scripts/health-check.sh
+```
+
+See detailed instructions below.
+
+## Supported Chains
+
+**Mainnets**: Ethereum, Arbitrum, Optimism, Base, Polygon, BSC, Avalanche, Fantom, Gnosis, Celo
+**Testnets**: Sepolia, Holesky, Arbitrum Sepolia, OP Sepolia, Base Sepolia, Polygon Amoy, BSC Testnet, Avalanche Fuji
+
+See `database/postgresql/init/02_chains.sql` for complete list.
 
 ## Database Schema
 
@@ -116,16 +129,20 @@ Kong Gateway (8000)
 - **latency_metrics**: SLA monitoring
 - **rate_limit_events**: Rate limit hit tracking
 
+## Key Scripts
+
+- `./scripts/setup-kong.sh` - Configure Kong for all chains
+- `./scripts/stats.sh` - View usage statistics and health
+- `./scripts/health-check.sh` - Check all services
+
 ## Development Roadmap
 
-- [x] **Phase 1**: Infrastructure foundation (Docker Compose, databases)
-- [ ] **Phase 2**: Database schemas and seed data
+- [x] **Phase 1-2**: Infrastructure + multichain support
 - [ ] **Phase 3**: Unkey integration with mTLS
-- [ ] **Phase 4**: Plan-based rate limiting
-- [ ] **Phase 5**: SigNoz observability stack
-- [ ] **Phase 6**: Usage tracking and billing ETL
-- [ ] **Phase 7**: Security hardening and HA setup
-- [ ] **Phase 8**: Customer portal API and UI
+- [ ] **Phase 4**: Plan-based dynamic rate limiting
+- [ ] **Phase 5**: SigNoz observability
+- [ ] **Phase 6**: Usage tracking and billing
+- [ ] **Phase 7**: Security hardening and HA
 
 ## Technology Stack
 
