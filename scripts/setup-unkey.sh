@@ -4,7 +4,7 @@
 set -e
 source "$(dirname "$0")/common.sh"
 
-UNKEY_API="${UNKEY_API_URL:-http://localhost:3001}"
+UNKEY_API="${UNKEY_BASE_URL:-http://localhost:3001}"
 ROOT_KEY="${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}"
 
 info "Initializing Unkey..."

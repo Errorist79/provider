@@ -6,7 +6,7 @@ local cjson = require "cjson.safe"
 local redis = require "resty.redis"
 
 -- Configuration
-local UNKEY_VERIFY_URL = os.getenv("UNKEY_VERIFY_URL") or "http://unkey:3000/api/v1/keys.verifyKey"
+local UNKEY_VERIFY_URL = os.getenv("UNKEY_VERIFY_URL") or "http://unkey:8080/api/v1/keys.verifyKey"
 local CACHE_TTL = tonumber(os.getenv("UNKEY_CACHE_TTL")) or 60
 local REDIS_HOST = os.getenv("REDIS_HOST") or "redis"
 local REDIS_PORT = tonumber(os.getenv("REDIS_PORT")) or 6379
