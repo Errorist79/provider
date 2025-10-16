@@ -29,10 +29,12 @@ This project provides a complete infrastructure stack for running a multi-tenant
 ### Gateway Features
 
 - **Load Balancing**: Round-robin across multiple RPC nodes with health checks
-- **Rate Limiting**: Per-consumer limits with burst support
-- **Authentication**: Unkey-powered API key verification with caching
+- **Dynamic Rate Limiting**: Plan-based limits (Free: 100/min, Basic: 1k/min, Pro: 10k/min, Enterprise: 100k/min)
+- **Compute Units**: Method-based cost calculation (eth_blockNumber=1 CU, debug_traceTransaction=50 CU)
+- **Plan Enforcement**: Archive/trace methods restricted to appropriate plans
+- **Authentication**: Unkey-powered API key verification with Redis caching
 - **CORS Support**: Configurable cross-origin resource sharing
-- **Metrics & Monitoring**: Comprehensive observability with Prometheus, Grafana, and SigNoz
+- **Metrics & Monitoring**: Real-time rate limit monitoring with Prometheus alerts
 - **Request Logging**: Detailed request logs with sensitive data redaction
 
 ## Usage Example
@@ -139,12 +141,13 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 - `./scripts/setup-kong.sh` - Configure Kong for all chains with Unkey auth
 - `./scripts/stats.sh` - View usage statistics and health
 - `./scripts/health-check.sh` - Check all services
+- `./scripts/monitor-rate-limits.sh` - Real-time rate limit monitoring
 
 ## Development Roadmap
 
 - [x] **Phase 1-2**: Infrastructure + multichain support
 - [x] **Phase 3**: Unkey integration with Redis caching
-- [ ] **Phase 4**: Plan-based dynamic rate limiting
+- [x] **Phase 4**: Plan-based dynamic rate limiting + compute units
 - [ ] **Phase 5**: SigNoz observability
 - [ ] **Phase 6**: Usage tracking and billing
 - [ ] **Phase 7**: Security hardening and HA

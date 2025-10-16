@@ -1,0 +1,82 @@
+# Prometheus Alert Rules for Rate Limiting
+groups:
+  - name: rate_limiting
+    interval: 30s
+    rules:
+      # High rate limit usage (>80%)
+      - alert: HighRateLimitUsage
+        expr: |
+          (kong_http_requests_total{code="429"} /
+           (kong_http_requests_total + kong_http_requests_total{code="429"})) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: rate-limiting
+        annotations:
+          summary: "High rate limit rejection rate"
+          description: "{{ $labels.consumer }} is hitting rate limits ({{ $value }}% of requests rejected)"
+
+      # Expensive method abuse
+      - alert: ExpensiveMethodAbuse
+        expr: |
+          sum(rate(kong_http_requests_total{rpc_method=~"debug_.*|trace_.*"}[5m]))
+          by (consumer, rpc_method) > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: api-abuse
+        annotations:
+          summary: "High usage of expensive methods"
+          description: "{{ $labels.consumer }} is making {{ $value }} req/s to {{ $labels.rpc_method }}"
+
+      # Rate limit 429 spike
+      - alert: RateLimitSpike
+        expr: |
+          rate(kong_http_requests_total{code="429"}[1m]) > 50
+        for: 2m
+        labels:
+          severity: info
+          component: rate-limiting
+        annotations:
+          summary: "Spike in rate limit rejections"
+          description: "{{ $value }} rate limit rejections per second"
+
+      # Consumer approaching limit
+      - alert: ConsumerApproachingLimit
+        expr: |
+          kong_http_requests_total{consumer!=""} > 0.8 *
+          (kong_http_requests_total + kong_http_requests_total{code="429"})
+        for: 5m
+        labels:
+          severity: info
+          component: rate-limiting
+        annotations:
+          summary: "Consumer approaching rate limit"
+          description: "{{ $labels.consumer }} is at {{ $value }}% of their rate limit"
+
+  - name: plan_enforcement
+    interval: 1m
+    rules:
+      # Free plan trying to use pro features
+      - alert: PlanViolation
+        expr: |
+          kong_http_requests_total{code="403", plan="free"} > 0
+        for: 1m
+        labels:
+          severity: info
+          component: plan-enforcement
+        annotations:
+          summary: "Free plan attempting to use premium features"
+          description: "Consumer on free plan attempted {{ $value }} premium method calls"
+
+      # Unusual compute unit consumption
+      - alert: HighComputeUnitUsage
+        expr: |
+          sum(rate(compute_units_total[5m])) by (consumer, plan) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: billing
+        annotations:
+          summary: "High compute unit consumption"
+          description: "{{ $labels.consumer }} ({{ $labels.plan }}) consuming {{ $value }} CU/s"

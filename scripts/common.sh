@@ -35,23 +35,31 @@ check_kong_health() {
 add_route_plugins() {
     local route_id=$1
 
-    # Pre-function plugin with Unkey verification
-    local LUA_CODE=$(cat "$(dirname "$0")/../config/kong-unkey-prefunction.lua" | sed 's/"/\\"/g' | tr '\n' ' ')
+    # 1. Pre-function: Unkey verification
+    local UNKEY_LUA=$(cat "$(dirname "$0")/../config/kong-unkey-prefunction.lua" | sed 's/"/\\"/g' | tr '\n' ' ')
 
+    # 2. Pre-function: Rate limit logic
+    local RATELIMIT_LUA=$(cat "$(dirname "$0")/../config/kong-rate-limit-prefunction.lua" | sed 's/"/\\"/g' | tr '\n' ' ')
+
+    # Add pre-function with both scripts
     curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
         -H 'Content-Type: application/json' \
-        -d "{\"name\":\"pre-function\",\"config\":{\"access\":[\"$LUA_CODE\"]}}" | jq -r '.name // "exists"'
+        -d "{\"name\":\"pre-function\",\"config\":{\"access\":[\"$UNKEY_LUA\",\"$RATELIMIT_LUA\"]}}" | jq -r '.name // "exists"'
 
-    # Rate limiting (consumer-based after Unkey auth)
+    # Rate limiting plugin - will use limits set by pre-function
+    # Using local policy for simplicity (can switch to redis for distributed)
     curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
         -d 'name=rate-limiting' \
         -d 'config.minute=10000' \
-        -d 'config.policy=redis' \
-        -d "config.redis.host=${REDIS_HOST:-redis}" \
-        -d "config.redis.port=${REDIS_PORT:-6379}" \
-        -d "config.redis.password=${REDIS_PASSWORD}" | jq -r '.name // "exists"'
+        -d 'config.policy=local' \
+        -d 'config.limit_by=consumer' \
+        -d 'config.fault_tolerant=true' | jq -r '.name // "exists"'
 
     # CORS
     curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
-        -d 'name=cors' | jq -r '.name // "exists"'
+        -d 'name=cors' \
+        -d 'config.origins[]=*' \
+        -d 'config.methods[]=GET' \
+        -d 'config.methods[]=POST' \
+        -d 'config.methods[]=OPTIONS' | jq -r '.name // "exists"'
 }
