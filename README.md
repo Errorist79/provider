@@ -152,7 +152,7 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 - [x] **Phase 3**: Unkey integration with Redis caching
 - [x] **Phase 4**: Plan-based dynamic rate limiting + compute units
 - [x] **Phase 5**: SigNoz observability with OpenTelemetry
-- [x] **Phase 6**: Usage tracking API (basic analytics)
+- [ ] **Phase 6**: Usage tracking API (basic analytics)
 - [ ] **Phase 7**: Get everything working end-to-end
 - [ ] **Phase 8**: Security hardening and HA
 - [ ] **Phase 9**: Full billing system (see docs/BILLING.md)
