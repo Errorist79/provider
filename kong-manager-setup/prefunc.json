@@ -1,0 +1,8 @@
+{
+  "name": "pre-function",
+  "config": {
+    "access": [
+"local path = kong.request.get_path()\nkong.log.debug('RAW PATH: ', path)\nlocal key = string.match(path, '^/eth/([^/]+)')\nif not key then\n  return kong.response.exit(400, { message = 'API key missing in path', path = path })\nend\nkong.log.debug('EXTRACTED KEY: ', key)\nkong.request.set_header('apikey', key)\nkong.service.request.set_path('/')"
+    ]
+  }
+}

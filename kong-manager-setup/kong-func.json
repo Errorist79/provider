@@ -1,0 +1,28 @@
+{
+  "route": {
+    "id": "c7baf37d-74b9-4cf9-9c06-548f96e4094a"
+  },
+  "name": "pre-function",
+  "id": "e472e18f-9277-44f1-ab75-4ccf34ae361d",
+  "service": null,
+  "consumer": null,
+  "config": {
+    "body_filter": [],
+    "rewrite": [],
+    "log": [],
+    "access": [
+      "local uri = kong.request.get_path()\nlocal m = ngx.re.match(uri, [[^/([^/]+)/eth$]], \"jo\")\nif m and m[1] then\n  local apikey = m[1]\n  ngx.req.set_header(\"apikey\", apikey)  -- key-auth görsün\n  kong.service.request.set_path(\"/\")    -- JSON-RPC root\nend"
+    ],
+    "certificate": [],
+    "header_filter": []
+  },
+  "enabled": true,
+  "protocols": [
+    "grpc",
+    "grpcs",
+    "http",
+    "https"
+  ],
+  "tags": null,
+  "instance_name": null
+}
