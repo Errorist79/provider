@@ -49,23 +49,17 @@ processors:
 
 exporters:
   # ClickHouse exporter for traces
-  clickhouse:
-    endpoint: tcp://clickhouse:9000?database=signoz_traces
-    ttl: 168h  # 7 days
-    traces_table_name: signoz_traces
+  clickhousetraces:
+    datasource: tcp://clickhouse:clickhouse@clickhouse:9000/?database=signoz_traces
     timeout: 10s
 
   # ClickHouse exporter for metrics
-  clickhousemetricswrite:
-    endpoint: tcp://clickhouse:9000?database=signoz_metrics
-    resource_to_telemetry_conversion:
-      enabled: true
+  signozclickhousemetrics:
+    dsn: tcp://clickhouse:clickhouse@clickhouse:9000/?database=signoz_metrics
 
-  # Logging exporter for debugging
-  logging:
-    loglevel: info
-    sampling_initial: 5
-    sampling_thereafter: 200
+  # Debug exporter for troubleshooting
+  debug:
+    verbosity: normal
 
 service:
   pipelines:
@@ -73,19 +67,13 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch, resourcedetection, attributes, transform]
-      exporters: [clickhouse, logging]
+      exporters: [clickhousetraces, debug]
 
     # Metrics pipeline
     metrics:
       receivers: [otlp, prometheus]
       processors: [batch, resourcedetection, attributes]
-      exporters: [clickhousemetricswrite]
-
-    # Logs pipeline
-    logs:
-      receivers: [otlp]
-      processors: [batch, resourcedetection, attributes]
-      exporters: [clickhouse]
+      exporters: [signozclickhousemetrics]
 
   extensions: []
   telemetry:

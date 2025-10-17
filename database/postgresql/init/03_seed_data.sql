@@ -9,7 +9,7 @@ INSERT INTO organizations (id, name, slug, email, status)
 VALUES
     ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Acme Corporation', 'acme-corp', 'admin@acme.example.com', 'active'),
     ('b1ffcd00-ad1c-5ff9-cc7e-7cc0cd491b22', 'Beta Labs', 'beta-labs', 'hello@betalabs.example.com', 'active'),
-    ('c2ggde11-be2d-6gga-dd8f-8dd1de5a2c33', 'Gamma DAO', 'gamma-dao', 'dao@gamma.example.com', 'active')
+    ('20460adf-d589-4921-a78f-40e4d346f234', 'Gamma DAO', 'gamma-dao', 'dao@gamma.example.com', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -17,9 +17,9 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 INSERT INTO users (id, organization_id, email, name, role, status)
 VALUES
-    ('d3hhef22-cf3e-7hhb-ee9g-9ee2ef6b3d44', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'alice@acme.example.com', 'Alice Admin', 'owner', 'active'),
-    ('e4iifg33-dg4f-8iic-ff0h-0ff3fg7c4e55', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'bob@acme.example.com', 'Bob Builder', 'admin', 'active'),
-    ('f5jjgh44-eh5g-9jjd-gg1i-1gg4gh8d5f66', 'b1ffcd00-ad1c-5ff9-cc7e-7cc0cd491b22', 'charlie@betalabs.example.com', 'Charlie Coder', 'owner', 'active')
+    ('d070c9c9-85e5-4b35-a395-322e880c1eef', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'alice@acme.example.com', 'Alice Admin', 'owner', 'active'),
+    ('d429914b-7667-4a62-a671-46023b291652', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'bob@acme.example.com', 'Bob Builder', 'admin', 'active'),
+    ('1d9c90db-82f9-46cd-91c0-cf1829340528', 'b1ffcd00-ad1c-5ff9-cc7e-7cc0cd491b22', 'charlie@betalabs.example.com', 'Charlie Coder', 'owner', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -37,7 +37,7 @@ INSERT INTO subscriptions (
 VALUES
     -- Acme Corp on Pro plan
     (
-        'g6kkih55-fi6h-0kkd-hh2j-2hh5hi9e6g77',
+        '8e0c7ed9-48d8-4ab0-a0b0-457a1e1d0eee',
         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         (SELECT id FROM plans WHERE slug = 'pro'),
         'active',
@@ -47,7 +47,7 @@ VALUES
     ),
     -- Beta Labs on Basic plan
     (
-        'h7llji66-gj7i-1lld-ii3k-3ii6ij0f7h88',
+        'db89d862-c718-4c9e-bb4c-9ecd2bb067c7',
         'b1ffcd00-ad1c-5ff9-cc7e-7cc0cd491b22',
         (SELECT id FROM plans WHERE slug = 'basic'),
         'active',
@@ -57,8 +57,8 @@ VALUES
     ),
     -- Gamma DAO on Free plan
     (
-        'i8mmkj77-hk8j-2mmd-jj4l-4jj7jk1g8i99',
-        'c2ggde11-be2d-6gga-dd8f-8dd1de5a2c33',
+        '4340a8c7-d198-470f-9534-db7437cd0a4d',
+        '20460adf-d589-4921-a78f-40e4d346f234',
         (SELECT id FROM plans WHERE slug = 'free'),
         'active',
         'monthly',
@@ -79,22 +79,22 @@ INSERT INTO consumers (
 )
 VALUES
     (
-        'j9nnlk88-il9k-3nnd-kk5m-5kk8kl2h9j00',
+        'dfae3125-0ef6-4cb6-9228-78e2894fe0e6',
         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         'kong_acme_001',
         'unkey_acme_identity_001',
         'active'
     ),
     (
-        'k0ooml99-jm0l-4ood-ll6n-6ll9lm3i0k11',
+        '25937f15-677d-4243-82b6-294e75462faa',
         'b1ffcd00-ad1c-5ff9-cc7e-7cc0cd491b22',
         'kong_beta_001',
         'unkey_beta_identity_001',
         'active'
     ),
     (
-        'l1ppnm00-kn1m-5ppd-mm7o-7mm0mn4j1l22',
-        'c2ggde11-be2d-6gga-dd8f-8dd1de5a2c33',
+        'd5363f6c-dbc3-4959-9d30-5755b3c1fb63',
+        '20460adf-d589-4921-a78f-40e4d346f234',
         'kong_gamma_001',
         'unkey_gamma_identity_001',
         'active'
@@ -117,9 +117,9 @@ INSERT INTO api_keys (
 )
 VALUES
     (
-        'm2qqon11-lo2n-6qqd-nn8p-8nn1no5k2m33',
+        'd06c10bc-0a1b-4413-b17c-3f494143293e',
         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-        'j9nnlk88-il9k-3nnd-kk5m-5kk8kl2h9j00',
+        'dfae3125-0ef6-4cb6-9228-78e2894fe0e6',
         'unkey_key_acme_prod_001',
         'sk_prod_acme',
         'Acme Production Key',
@@ -128,9 +128,9 @@ VALUES
         '["*"]'
     ),
     (
-        'n3rrop22-mp3o-7rrd-oo9q-9oo2op6l3n44',
+        '4f51cee2-6e38-42b1-bdf4-53c18b88d2db',
         'b1ffcd00-ad1c-5ff9-cc7e-7cc0cd491b22',
-        'k0ooml99-jm0l-4ood-ll6n-6ll9lm3i0k11',
+        '25937f15-677d-4243-82b6-294e75462faa',
         'unkey_key_beta_dev_001',
         'sk_dev_beta',
         'Beta Dev Key',
@@ -139,9 +139,9 @@ VALUES
         '["eth-mainnet", "eth-sepolia", "polygon-mainnet"]'
     ),
     (
-        'o4sspq33-nq4p-8ssd-pp0r-0pp3pq7m4o55',
-        'c2ggde11-be2d-6gga-dd8f-8dd1de5a2c33',
-        'l1ppnm00-kn1m-5ppd-mm7o-7mm0mn4j1l22',
+        '096c8ef4-36f0-4d9d-be50-5f17e3a20d48',
+        '20460adf-d589-4921-a78f-40e4d346f234',
+        'd5363f6c-dbc3-4959-9d30-5755b3c1fb63',
         'unkey_key_gamma_test_001',
         'sk_test_gamma',
         'Gamma Test Key',

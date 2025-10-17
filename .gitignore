@@ -49,3 +49,4 @@ yarn.lock
 # Backup files
 *.backup
 *.bak
+examples

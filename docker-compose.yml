@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${KONG_DB_PASSWORD:-kong}
       POSTGRES_DB: ${KONG_DB_NAME:-kong}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KONG_DB_USER:-kong}"]
+      test: ["CMD-SHELL", "pg_isready -U ${KONG_DB_USER:-kong} -d ${KONG_DB_NAME:-kong}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -91,7 +91,7 @@ services:
       POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
       POSTGRES_DB: ${APP_DB_NAME:-rpc_gateway}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER:-rpcuser}"]
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER:-rpcuser} -d ${APP_DB_NAME:-rpc_gateway}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -208,6 +208,7 @@ services:
   unkey:
     image: ghcr.io/unkeyed/unkey:${UNKEY_VERSION:-v2.0.28}
     container_name: unkey
+    command: ["run"]
     environment:
       # Database connection
       DATABASE_HOST: app-database
