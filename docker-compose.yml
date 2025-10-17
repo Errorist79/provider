@@ -305,6 +305,58 @@ services:
     depends_on:
       - signoz-query-service
 
+  # ============================================================================
+  # Reporting API (Usage Analytics & Metrics)
+  # ============================================================================
+  reporting-api:
+    build:
+      context: ./services/reporting-api
+      dockerfile: Dockerfile
+    container_name: reporting-api
+    environment:
+      # Server configuration
+      REPORTING_API_SERVER_PORT: "8080"
+      REPORTING_API_SERVER_ENVIRONMENT: ${ENVIRONMENT:-development}
+
+      # ClickHouse connection
+      REPORTING_API_CLICKHOUSE_HOST: clickhouse
+      REPORTING_API_CLICKHOUSE_PORT: 9000
+      REPORTING_API_CLICKHOUSE_DATABASE: ${CLICKHOUSE_DB:-telemetry}
+      REPORTING_API_CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-clickhouse}
+      REPORTING_API_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+
+      # PostgreSQL connection
+      REPORTING_API_POSTGRESQL_HOST: app-database
+      REPORTING_API_POSTGRESQL_PORT: 5432
+      REPORTING_API_POSTGRESQL_DATABASE: ${APP_DB_NAME:-rpc_gateway}
+      REPORTING_API_POSTGRESQL_USERNAME: ${APP_DB_USER:-rpcuser}
+      REPORTING_API_POSTGRESQL_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
+      REPORTING_API_POSTGRESQL_SSLMODE: disable
+
+      # Authentication (Phase 6: Simple API key, Phase 7+: Unkey integration)
+      REPORTING_API_AUTH_ENABLED: ${REPORTING_API_AUTH_ENABLED:-false}
+      REPORTING_API_AUTH_ADMINAPIKEY: ${REPORTING_API_ADMIN_KEY:-change_me_in_production}
+
+      # Logging
+      REPORTING_API_LOGGING_LEVEL: ${LOG_LEVEL:-info}
+      REPORTING_API_LOGGING_FORMAT: json
+    ports:
+      - "${REPORTING_API_PORT:-4000}:8080"
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      app-database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 networks:
   rpc-gateway-net:
     driver: bridge

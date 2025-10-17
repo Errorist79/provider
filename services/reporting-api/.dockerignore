@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Development
+.vscode
+.idea
+
+# Testing
+*_test.go
+testdata/
+
+# Build artifacts
+bin/
+build/
+dist/
+
+# Dependencies
+vendor/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
