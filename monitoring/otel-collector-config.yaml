@@ -50,12 +50,12 @@ processors:
 exporters:
   # ClickHouse exporter for traces
   clickhousetraces:
-    datasource: tcp://clickhouse:clickhouse@clickhouse:9000/?database=signoz_traces
+    datasource: tcp://clickhouse:clickhouse@clickhouse:9000/signoz_traces
     timeout: 10s
 
   # ClickHouse exporter for metrics
   signozclickhousemetrics:
-    dsn: tcp://clickhouse:clickhouse@clickhouse:9000/?database=signoz_metrics
+    dsn: tcp://clickhouse:clickhouse@clickhouse:9000/signoz_metrics
 
   # Debug exporter for troubleshooting
   debug:

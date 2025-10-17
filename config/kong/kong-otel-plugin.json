@@ -1,0 +1,10 @@
+{
+  "name": "opentelemetry",
+  "config": {
+    "endpoint": "http://otel-collector:4318/v1/traces",
+    "resource_attributes": {
+      "service.name": "kong-gateway"
+    },
+    "header_type": "w3c"
+  }
+}
