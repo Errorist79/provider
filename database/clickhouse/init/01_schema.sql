@@ -84,39 +84,33 @@ CREATE TABLE IF NOT EXISTS usage_hourly (
     -- Dimensions
     organization_id String CODEC(ZSTD(1)),
     consumer_id String CODEC(ZSTD(1)),
+    api_key_prefix String CODEC(ZSTD(1)),
     plan_slug String CODEC(ZSTD(1)),
     chain_slug String CODEC(ZSTD(1)),
     chain_type String CODEC(ZSTD(1)),
     route_name String CODEC(ZSTD(1)),
     rpc_method String CODEC(ZSTD(1)),
 
-    -- Metrics
-    request_count UInt64 CODEC(T64, LZ4),
-    error_count UInt64 CODEC(T64, LZ4),
-    compute_units_used UInt64 CODEC(T64, LZ4),
+    -- Metric states (finalised via views)
+    request_count AggregateFunction(sum, UInt64),
+    error_count AggregateFunction(sum, UInt64),
+    compute_units_used AggregateFunction(sum, UInt64),
 
-    -- Success by status code
-    status_2xx_count UInt64 CODEC(T64, LZ4),
-    status_4xx_count UInt64 CODEC(T64, LZ4),
-    status_5xx_count UInt64 CODEC(T64, LZ4),
+    status_2xx_count AggregateFunction(sum, UInt64),
+    status_4xx_count AggregateFunction(sum, UInt64),
+    status_5xx_count AggregateFunction(sum, UInt64),
 
-    -- Bandwidth
-    total_response_size UInt64 CODEC(T64, LZ4),
+    total_response_size AggregateFunction(sum, UInt64),
 
-    -- Latency percentiles (in ms)
-    latency_p50 Float32 CODEC(LZ4),
-    latency_p95 Float32 CODEC(LZ4),
-    latency_p99 Float32 CODEC(LZ4),
-    latency_max Float32 CODEC(LZ4),
+    latency_ms_avg AggregateFunction(avg, UInt32),
+    latency_ms_quantiles AggregateFunction(quantiles(0.50, 0.95, 0.99), Float32),
+    latency_ms_max AggregateFunction(max, UInt32),
 
-    -- Upstream latency percentiles
-    upstream_latency_p50 Float32 CODEC(LZ4),
-    upstream_latency_p95 Float32 CODEC(LZ4),
-    upstream_latency_p99 Float32 CODEC(LZ4)
+    upstream_latency_quantiles AggregateFunction(quantiles(0.50, 0.95, 0.99), Float32)
 )
-ENGINE = SummingMergeTree()
+ENGINE = AggregatingMergeTree()
 PARTITION BY toYYYYMM(hour)
-ORDER BY (hour, chain_slug, organization_id, consumer_id, plan_slug, route_name, rpc_method)
+ORDER BY (hour, chain_slug, organization_id, consumer_id, api_key_prefix, plan_slug, route_name, rpc_method)
 TTL hour + INTERVAL 90 DAY  -- Keep hourly data for 90 days
 SETTINGS index_granularity = 8192;
 
@@ -128,35 +122,34 @@ SELECT
     toStartOfHour(timestamp) as hour,
     organization_id,
     consumer_id,
+    api_key_prefix,
     plan_slug,
     chain_slug,
     chain_type,
     route_name,
     rpc_method,
 
-    count() as request_count,
-    countIf(is_error = 1) as error_count,
-    sum(compute_units) as compute_units_used,
+    sumState(toUInt64(1)) as request_count,
+    sumState(toUInt64(is_error = 1)) as error_count,
+    sumState(toUInt64(compute_units)) as compute_units_used,
 
-    countIf(status_code >= 200 AND status_code < 300) as status_2xx_count,
-    countIf(status_code >= 400 AND status_code < 500) as status_4xx_count,
-    countIf(status_code >= 500) as status_5xx_count,
+    sumState(toUInt64(status_code >= 200 AND status_code < 300)) as status_2xx_count,
+    sumState(toUInt64(status_code >= 400 AND status_code < 500)) as status_4xx_count,
+    sumState(toUInt64(status_code >= 500)) as status_5xx_count,
 
-    sum(response_size) as total_response_size,
+    sumState(toUInt64(response_size)) as total_response_size,
 
-    quantile(0.50)(latency_ms) as latency_p50,
-    quantile(0.95)(latency_ms) as latency_p95,
-    quantile(0.99)(latency_ms) as latency_p99,
-    max(latency_ms) as latency_max,
+    avgState(toUInt32(latency_ms)) as latency_ms_avg,
+    quantilesState(0.50, 0.95, 0.99)(toFloat32(latency_ms)) as latency_ms_quantiles,
+    maxState(toUInt32(latency_ms)) as latency_ms_max,
 
-    quantile(0.50)(upstream_latency_ms) as upstream_latency_p50,
-    quantile(0.95)(upstream_latency_ms) as upstream_latency_p95,
-    quantile(0.99)(upstream_latency_ms) as upstream_latency_p99
+    quantilesState(0.50, 0.95, 0.99)(toFloat32(upstream_latency_ms)) as upstream_latency_quantiles
 FROM requests_raw
 GROUP BY
     hour,
     organization_id,
     consumer_id,
+    api_key_prefix,
     plan_slug,
     chain_slug,
     chain_type,
@@ -177,40 +170,35 @@ CREATE TABLE IF NOT EXISTS usage_daily (
     chain_slug String CODEC(ZSTD(1)),
     chain_type String CODEC(ZSTD(1)),
 
-    -- Metrics
-    request_count UInt64 CODEC(T64, LZ4),
-    error_count UInt64 CODEC(T64, LZ4),
-    compute_units_used UInt64 CODEC(T64, LZ4),
+    -- Metric states (finalised via views)
+    request_count AggregateFunction(sum, UInt64),
+    error_count AggregateFunction(sum, UInt64),
+    compute_units_used AggregateFunction(sum, UInt64),
 
-    status_2xx_count UInt64 CODEC(T64, LZ4),
-    status_4xx_count UInt64 CODEC(T64, LZ4),
-    status_5xx_count UInt64 CODEC(T64, LZ4),
+    status_2xx_count AggregateFunction(sum, UInt64),
+    status_4xx_count AggregateFunction(sum, UInt64),
+    status_5xx_count AggregateFunction(sum, UInt64),
 
-    total_response_size UInt64 CODEC(T64, LZ4),
+    total_response_size AggregateFunction(sum, UInt64),
 
-    -- Latency percentiles (for reporting API)
-    latency_p50 Float32 CODEC(LZ4),
-    latency_p95 Float32 CODEC(LZ4),
-    latency_p99 Float32 CODEC(LZ4),
-    avg_latency_ms Float32 CODEC(LZ4),
-    max_latency_ms Float32 CODEC(LZ4),
+    latency_ms_avg AggregateFunction(avg, UInt32),
+    latency_ms_quantiles AggregateFunction(quantiles(0.50, 0.95, 0.99), Float32),
+    latency_ms_max AggregateFunction(max, UInt32),
 
-    -- Uptime/reliability
-    success_rate Float32 CODEC(LZ4),
-    error_rate Float32 CODEC(LZ4)
+    upstream_latency_quantiles AggregateFunction(quantiles(0.50, 0.95, 0.99), Float32)
 )
-ENGINE = SummingMergeTree()
+ENGINE = AggregatingMergeTree()
 PARTITION BY toYYYYMM(date)
-ORDER BY (date, chain_slug, organization_id, consumer_id, plan_slug)
+ORDER BY (date, chain_slug, organization_id, consumer_id, api_key_prefix, plan_slug)
 TTL date + INTERVAL 540 DAY  -- Keep daily data for 18 months
 SETTINGS index_granularity = 8192;
 
--- Materialized view to populate usage_daily from usage_hourly
+-- Materialized view to populate usage_daily from hourly state table
 CREATE MATERIALIZED VIEW IF NOT EXISTS usage_daily_mv
 TO usage_daily
 AS
 SELECT
-    toDate(timestamp) as date,
+    toDate(hour) as date,
     organization_id,
     consumer_id,
     api_key_prefix,
@@ -218,24 +206,21 @@ SELECT
     chain_slug,
     chain_type,
 
-    sum(request_count) as request_count,
-    sum(error_count) as error_count,
-    sum(compute_units_used) as compute_units_used,
+    sumMergeState(request_count) as request_count,
+    sumMergeState(error_count) as error_count,
+    sumMergeState(compute_units_used) as compute_units_used,
 
-    sum(status_2xx_count) as status_2xx_count,
-    sum(status_4xx_count) as status_4xx_count,
-    sum(status_5xx_count) as status_5xx_count,
+    sumMergeState(status_2xx_count) as status_2xx_count,
+    sumMergeState(status_4xx_count) as status_4xx_count,
+    sumMergeState(status_5xx_count) as status_5xx_count,
 
-    sum(total_response_size) as total_response_size,
+    sumMergeState(total_response_size) as total_response_size,
 
-    avg(latency_p50) as latency_p50,
-    avg(latency_p95) as latency_p95,
-    avg(latency_p99) as latency_p99,
-    avg(latency_p50) as avg_latency_ms,
-    max(latency_max) as max_latency_ms,
+    avgMergeState(latency_ms_avg) as latency_ms_avg,
+    quantilesMergeState(0.50, 0.95, 0.99)(latency_ms_quantiles) as latency_ms_quantiles,
+    maxMergeState(latency_ms_max) as latency_ms_max,
 
-    sum(status_2xx_count) / sum(request_count) * 100 as success_rate,
-    sum(error_count) / sum(request_count) * 100 as error_rate
+    quantilesMergeState(0.50, 0.95, 0.99)(upstream_latency_quantiles) as upstream_latency_quantiles
 FROM usage_hourly
 GROUP BY
     date,
@@ -245,6 +230,24 @@ GROUP BY
     plan_slug,
     chain_slug,
     chain_type;
+
+-- Note: Query from AggregatingMergeTree tables with the pattern below to get final metrics
+-- SELECT
+--     hour,
+--     organization_id,
+--     sumMerge(request_count) AS request_count,
+--     sumMerge(error_count) AS error_count,
+--     sumMerge(status_2xx_count) AS status_2xx_count,
+--     avgMerge(latency_ms_avg) AS avg_latency_ms,
+--     quantileMerge(0.50)(latency_ms_quantiles) AS latency_p50,
+--     quantileMerge(0.95)(latency_ms_quantiles) AS latency_p95,
+--     quantileMerge(0.99)(latency_ms_quantiles) AS latency_p99,
+--     ...
+-- FROM usage_hourly
+-- GROUP BY hour, organization_id, ...;
+
+-- Daily rollups follow the same pattern using usage_daily
+-- (replacing the GROUP BY list with date, organization_id, ...)
 
 -- ============================================================================
 -- Error Tracking (Detailed error logs)
