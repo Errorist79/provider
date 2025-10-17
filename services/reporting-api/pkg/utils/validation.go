@@ -6,11 +6,11 @@ import (
 )
 
 var (
-	ErrInvalidDateRange   = errors.New("end_date must be after start_date")
-	ErrDateRangeTooLarge  = errors.New("date range cannot exceed 1 year")
-	ErrInvalidDateFormat  = errors.New("invalid date format, use YYYY-MM-DD")
-	ErrMissingParameter   = errors.New("required parameter is missing")
-	ErrInvalidParameter   = errors.New("invalid parameter value")
+	ErrInvalidDateRange  = errors.New("end_date must be after start_date")
+	ErrDateRangeTooLarge = errors.New("date range cannot exceed 1 year")
+	ErrInvalidDateFormat = errors.New("invalid date format, use YYYY-MM-DD")
+	ErrMissingParameter  = errors.New("required parameter is missing")
+	ErrInvalidParameter  = errors.New("invalid parameter value")
 )
 
 // ValidateDateRange validates that end date is after start date

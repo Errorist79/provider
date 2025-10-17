@@ -83,9 +83,9 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	chDuration := time.Since(chStart)
 
 	checks["clickhouse"] = map[string]interface{}{
-		"healthy":      chErr == nil,
-		"response_ms":  chDuration.Milliseconds(),
-		"error":        formatError(chErr),
+		"healthy":     chErr == nil,
+		"response_ms": chDuration.Milliseconds(),
+		"error":       formatError(chErr),
 	}
 
 	// Check PostgreSQL with timing
@@ -94,9 +94,9 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	pgDuration := time.Since(pgStart)
 
 	checks["postgresql"] = map[string]interface{}{
-		"healthy":      pgErr == nil,
-		"response_ms":  pgDuration.Milliseconds(),
-		"error":        formatError(pgErr),
+		"healthy":     pgErr == nil,
+		"response_ms": pgDuration.Milliseconds(),
+		"error":       formatError(pgErr),
 	}
 
 	allHealthy := chErr == nil && pgErr == nil

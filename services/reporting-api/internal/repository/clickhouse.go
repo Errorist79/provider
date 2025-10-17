@@ -30,9 +30,9 @@ func NewClickHouseRepository(cfg *config.ClickHouseConfig) (*ClickHouseRepositor
 		Compression: &clickhouse.Compression{
 			Method: clickhouse.CompressionLZ4,
 		},
-		DialTimeout: 10 * time.Second,
-		MaxOpenConns: 10,
-		MaxIdleConns: 5,
+		DialTimeout:     10 * time.Second,
+		MaxOpenConns:    10,
+		MaxIdleConns:    5,
 		ConnMaxLifetime: time.Hour,
 	})
 	if err != nil {

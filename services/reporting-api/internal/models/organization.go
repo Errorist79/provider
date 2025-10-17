@@ -22,7 +22,7 @@ type User struct {
 	OrganizationID string    `json:"organization_id"`
 	Email          string    `json:"email"`
 	Name           string    `json:"name"`
-	Role           string    `json:"role"` // owner, admin, member
+	Role           string    `json:"role"`   // owner, admin, member
 	Status         string    `json:"status"` // active, inactive, suspended
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at,omitempty"`
@@ -50,19 +50,19 @@ type Plan struct {
 
 // Subscription represents an active subscription
 type Subscription struct {
-	ID                  string    `json:"id"`
-	OrganizationID      string    `json:"organization_id"`
-	PlanID              string    `json:"plan_id"`
-	Status              string    `json:"status"` // active, past_due, canceled, suspended
-	BillingPeriod       string    `json:"billing_period"` // monthly, yearly
-	CurrentPeriodStart  time.Time `json:"current_period_start"`
-	CurrentPeriodEnd    time.Time `json:"current_period_end"`
-	TrialStart          *time.Time `json:"trial_start,omitempty"`
-	TrialEnd            *time.Time `json:"trial_end,omitempty"`
-	CancelAtPeriodEnd   bool      `json:"cancel_at_period_end"`
-	CanceledAt          *time.Time `json:"canceled_at,omitempty"`
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at,omitempty"`
+	ID                 string     `json:"id"`
+	OrganizationID     string     `json:"organization_id"`
+	PlanID             string     `json:"plan_id"`
+	Status             string     `json:"status"`         // active, past_due, canceled, suspended
+	BillingPeriod      string     `json:"billing_period"` // monthly, yearly
+	CurrentPeriodStart time.Time  `json:"current_period_start"`
+	CurrentPeriodEnd   time.Time  `json:"current_period_end"`
+	TrialStart         *time.Time `json:"trial_start,omitempty"`
+	TrialEnd           *time.Time `json:"trial_end,omitempty"`
+	CancelAtPeriodEnd  bool       `json:"cancel_at_period_end"`
+	CanceledAt         *time.Time `json:"canceled_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at,omitempty"`
 }
 
 // APIKey represents API key metadata (secrets stored in Unkey)
@@ -109,9 +109,9 @@ type OrganizationListResponse struct {
 
 // OrganizationDetailResponse represents full organization details
 type OrganizationDetailResponse struct {
-	Organization Organization   `json:"organization"`
-	Plan         *Plan          `json:"plan,omitempty"`
-	Subscription *Subscription  `json:"subscription,omitempty"`
-	Users        []User         `json:"users,omitempty"`
-	APIKeys      []APIKey       `json:"api_keys,omitempty"`
+	Organization Organization  `json:"organization"`
+	Plan         *Plan         `json:"plan,omitempty"`
+	Subscription *Subscription `json:"subscription,omitempty"`
+	Users        []User        `json:"users,omitempty"`
+	APIKeys      []APIKey      `json:"api_keys,omitempty"`
 }

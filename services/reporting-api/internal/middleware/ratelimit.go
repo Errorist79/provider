@@ -87,7 +87,7 @@ func RateLimitMiddleware(limiter *RateLimiter) gin.HandlerFunc {
 
 		if !limiter.Allow(key) {
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error": "rate limit exceeded",
+				"error":       "rate limit exceeded",
 				"retry_after": limiter.window.Seconds(),
 			})
 			c.Abort()
@@ -110,7 +110,7 @@ func RateLimitByAPIKeyMiddleware(limiter *RateLimiter) gin.HandlerFunc {
 
 		if !limiter.Allow(apiKey) {
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error": "rate limit exceeded",
+				"error":       "rate limit exceeded",
 				"retry_after": limiter.window.Seconds(),
 			})
 			c.Abort()
