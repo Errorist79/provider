@@ -94,13 +94,3 @@ type UsageQueryParams struct {
 	Limit        int
 	Offset       int
 }
-
-// Organization represents basic org info from PostgreSQL
-type Organization struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	PlanSlug  string    `json:"plan_slug,omitempty"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-}
