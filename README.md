@@ -125,7 +125,7 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 - **subscriptions**: Active subscriptions linking orgs to plans
 - **consumers**: Kong consumers linked to Unkey identities
 - **api_keys**: API key metadata (secrets stored in Unkey)
-- **invoices**: Billing invoices (placeholder - full billing system coming later)
+- **invoices**: Billing invoices (PLACEHOLDER - see docs/BILLING-PLACEHOLDER.md)
 - **webhooks**: Event notification configuration
 - **audit_logs**: Complete audit trail
 
@@ -156,6 +156,9 @@ See `database/postgresql/init/02_chains.sql` for complete list.
 - [ ] **Phase 7**: Get everything working end-to-end
 - [ ] **Phase 8**: Security hardening and HA
 - [ ] **Phase 9**: Full billing system (see docs/BILLING.md)
+  - Note: Billing is currently a placeholder (see docs/BILLING-PLACEHOLDER.md)
+  - Usage data collection is complete and ready for Phase 9 integration
+  - Will integrate OpenMeter + Stripe (global) + Paraşüt (Turkey) when core gateway is stable
 
 ## Technology Stack
 

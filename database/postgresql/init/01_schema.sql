@@ -188,8 +188,19 @@ CREATE INDEX idx_api_keys_status ON api_keys(status);
 CREATE INDEX idx_api_keys_expires_at ON api_keys(expires_at);
 
 -- ============================================================================
--- Invoices
+-- Invoices (PLACEHOLDER for Phase 9)
 -- ============================================================================
+-- TODO Phase 9: This is a minimal placeholder table.
+-- Full billing implementation will integrate:
+--   - OpenMeter for usage metering & rating
+--   - Stripe for global billing (USD/EUR)
+--   - Paraşüt for Turkish e-invoice compliance (TL)
+--   - FX rate tracking, reconciliation, audit ledger
+-- See docs/BILLING.md for complete architecture
+-- See docs/BILLING-PLACEHOLDER.md for current implementation status
+--
+-- For now: Usage data flows to ClickHouse (usage_hourly, usage_daily)
+-- which will be the source of truth for billing when Phase 9 is implemented.
 CREATE TABLE invoices (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -197,13 +208,13 @@ CREATE TABLE invoices (
 
     invoice_number VARCHAR(50) NOT NULL UNIQUE,
 
-    -- Amounts
+    -- Amounts (simplified - no multi-currency/FX yet)
     subtotal DECIMAL(10,2) NOT NULL,
     tax DECIMAL(10,2) DEFAULT 0,
     total DECIMAL(10,2) NOT NULL,
     currency VARCHAR(3) DEFAULT 'USD',
 
-    -- Status
+    -- Status (simplified - no payment processor integration yet)
     status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'open', 'paid', 'void', 'uncollectible')),
 
     -- Dates
@@ -212,8 +223,11 @@ CREATE TABLE invoices (
     due_date TIMESTAMP WITH TIME ZONE,
     paid_at TIMESTAMP WITH TIME ZONE,
 
-    -- Line items (usage breakdown)
+    -- Line items (usage breakdown - will be populated from ClickHouse in Phase 9)
     line_items JSONB DEFAULT '[]',
+
+    -- TODO Phase 9: Add fields for Stripe/Paraşüt integration
+    -- stripe_invoice_id, parasut_invoice_id, fx_rate, reconciliation_hash, etc.
 
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -371,7 +385,7 @@ COMMENT ON TABLE plans IS 'Subscription plans with rate limits and pricing';
 COMMENT ON TABLE subscriptions IS 'Active subscriptions linking organizations to plans';
 COMMENT ON TABLE consumers IS 'Kong consumers linked to Unkey identities';
 COMMENT ON TABLE api_keys IS 'API key metadata (secrets stored in Unkey)';
-COMMENT ON TABLE invoices IS 'Billing invoices';
+COMMENT ON TABLE invoices IS 'PLACEHOLDER: Billing invoices (Phase 9 will add OpenMeter/Stripe/Paraşüt integration)';
 COMMENT ON TABLE webhooks IS 'Webhook configurations for event notifications';
 COMMENT ON TABLE webhook_deliveries IS 'Webhook delivery attempts and logs';
 COMMENT ON TABLE audit_logs IS 'Audit trail of all important actions';
