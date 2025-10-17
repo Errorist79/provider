@@ -12,7 +12,8 @@ USE telemetry;
 -- Raw Request Logs (High volume, short retention)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS requests_raw (
-    timestamp DateTime64(3) CODEC(DoubleDelta, LZ4),
+    timestamp DateTime CODEC(DoubleDelta, LZ4),
+    timestamp_ms DateTime64(3) CODEC(DoubleDelta, LZ4),
     request_id String CODEC(ZSTD(1)),
 
     -- Request metadata
@@ -103,15 +104,15 @@ CREATE TABLE IF NOT EXISTS usage_hourly (
     total_response_size UInt64 CODEC(T64, LZ4),
 
     -- Latency percentiles (in ms)
-    latency_p50 Float32 CODEC(T64, LZ4),
-    latency_p95 Float32 CODEC(T64, LZ4),
-    latency_p99 Float32 CODEC(T64, LZ4),
-    latency_max Float32 CODEC(T64, LZ4),
+    latency_p50 Float32 CODEC(LZ4),
+    latency_p95 Float32 CODEC(LZ4),
+    latency_p99 Float32 CODEC(LZ4),
+    latency_max Float32 CODEC(LZ4),
 
     -- Upstream latency percentiles
-    upstream_latency_p50 Float32 CODEC(T64, LZ4),
-    upstream_latency_p95 Float32 CODEC(T64, LZ4),
-    upstream_latency_p99 Float32 CODEC(T64, LZ4)
+    upstream_latency_p50 Float32 CODEC(LZ4),
+    upstream_latency_p95 Float32 CODEC(LZ4),
+    upstream_latency_p99 Float32 CODEC(LZ4)
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(hour)
@@ -188,15 +189,15 @@ CREATE TABLE IF NOT EXISTS usage_daily (
     total_response_size UInt64 CODEC(T64, LZ4),
 
     -- Latency percentiles (for reporting API)
-    latency_p50 Float32 CODEC(T64, LZ4),
-    latency_p95 Float32 CODEC(T64, LZ4),
-    latency_p99 Float32 CODEC(T64, LZ4),
-    avg_latency_ms Float32 CODEC(T64, LZ4),
-    max_latency_ms Float32 CODEC(T64, LZ4),
+    latency_p50 Float32 CODEC(LZ4),
+    latency_p95 Float32 CODEC(LZ4),
+    latency_p99 Float32 CODEC(LZ4),
+    avg_latency_ms Float32 CODEC(LZ4),
+    max_latency_ms Float32 CODEC(LZ4),
 
     -- Uptime/reliability
-    success_rate Float32 CODEC(T64, LZ4),
-    error_rate Float32 CODEC(T64, LZ4)
+    success_rate Float32 CODEC(LZ4),
+    error_rate Float32 CODEC(LZ4)
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(date)
@@ -209,10 +210,10 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS usage_daily_mv
 TO usage_daily
 AS
 SELECT
-    toDate(hour) as date,
+    toDate(timestamp) as date,
     organization_id,
     consumer_id,
-    '' as api_key_prefix,  -- Will be populated from requests_raw if needed
+    api_key_prefix,
     plan_slug,
     chain_slug,
     chain_type,
@@ -240,6 +241,7 @@ GROUP BY
     date,
     organization_id,
     consumer_id,
+    api_key_prefix,
     plan_slug,
     chain_slug,
     chain_type;
@@ -248,7 +250,8 @@ GROUP BY
 -- Error Tracking (Detailed error logs)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS errors (
-    timestamp DateTime64(3) CODEC(DoubleDelta, LZ4),
+    timestamp DateTime CODEC(DoubleDelta, LZ4),
+    timestamp_ms DateTime64(3) CODEC(DoubleDelta, LZ4),
     request_id String CODEC(ZSTD(1)),
 
     -- Context
@@ -320,10 +323,10 @@ CREATE TABLE IF NOT EXISTS latency_metrics (
     latency_1000ms_plus UInt32 CODEC(T64, LZ4),
 
     -- Percentiles
-    p50 Float32 CODEC(T64, LZ4),
-    p95 Float32 CODEC(T64, LZ4),
-    p99 Float32 CODEC(T64, LZ4),
-    p999 Float32 CODEC(T64, LZ4)
+    p50 Float32 CODEC(LZ4),
+    p95 Float32 CODEC(LZ4),
+    p99 Float32 CODEC(LZ4),
+    p999 Float32 CODEC(LZ4)
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(timestamp)
@@ -358,7 +361,8 @@ GROUP BY timestamp, route_name, upstream_host;
 -- Rate Limit Events
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS rate_limit_events (
-    timestamp DateTime64(3) CODEC(DoubleDelta, LZ4),
+    timestamp DateTime CODEC(DoubleDelta, LZ4),
+    timestamp_ms DateTime64(3) CODEC(DoubleDelta, LZ4),
 
     -- Consumer
     organization_id String CODEC(ZSTD(1)),

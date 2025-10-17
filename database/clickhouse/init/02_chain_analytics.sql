@@ -18,14 +18,14 @@ CREATE TABLE IF NOT EXISTS chain_health (
     health_check_failures UInt32 CODEC(T64, LZ4),
 
     -- Performance
-    avg_latency_ms Float32 CODEC(T64, LZ4),
-    p95_latency_ms Float32 CODEC(T64, LZ4),
-    p99_latency_ms Float32 CODEC(T64, LZ4),
+    avg_latency_ms Float32 CODEC(Delta, LZ4),
+    p95_latency_ms Float32 CODEC(Delta, LZ4),
+    p99_latency_ms Float32 CODEC(Delta, LZ4),
 
     -- Request metrics
     request_count UInt64 CODEC(T64, LZ4),
     error_count UInt64 CODEC(T64, LZ4),
-    error_rate Float32 CODEC(T64, LZ4),
+    error_rate Float32 CODEC(Delta, LZ4),
 
     -- Block height (for sync status monitoring)
     latest_block UInt64 CODEC(T64, LZ4),

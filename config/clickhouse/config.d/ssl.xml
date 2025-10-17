@@ -1,0 +1,14 @@
+<clickhouse>
+    <openSSL>
+        <server>
+            <certificateFile>/etc/clickhouse-server/certs/server.crt</certificateFile>
+            <privateKeyFile>/etc/clickhouse-server/certs/server.key</privateKeyFile>
+            <caConfig>/etc/clickhouse-server/certs/ca.pem</caConfig>
+        </server>
+        <client>
+            <certificateFile>/etc/clickhouse-server/certs/client.crt</certificateFile>
+            <privateKeyFile>/etc/clickhouse-server/certs/client.key</privateKeyFile>
+            <caConfig>/etc/clickhouse-server/certs/ca.pem</caConfig>
+        </client>
+    </openSSL>
+</clickhouse>
