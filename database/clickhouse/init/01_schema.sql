@@ -171,8 +171,10 @@ CREATE TABLE IF NOT EXISTS usage_daily (
     -- Dimensions
     organization_id String CODEC(ZSTD(1)),
     consumer_id String CODEC(ZSTD(1)),
+    api_key_prefix String CODEC(ZSTD(1)),
     plan_slug String CODEC(ZSTD(1)),
     chain_slug String CODEC(ZSTD(1)),
+    chain_type String CODEC(ZSTD(1)),
 
     -- Metrics
     request_count UInt64 CODEC(T64, LZ4),
@@ -185,7 +187,10 @@ CREATE TABLE IF NOT EXISTS usage_daily (
 
     total_response_size UInt64 CODEC(T64, LZ4),
 
-    -- Latency
+    -- Latency percentiles (for reporting API)
+    latency_p50 Float32 CODEC(T64, LZ4),
+    latency_p95 Float32 CODEC(T64, LZ4),
+    latency_p99 Float32 CODEC(T64, LZ4),
     avg_latency_ms Float32 CODEC(T64, LZ4),
     max_latency_ms Float32 CODEC(T64, LZ4),
 
@@ -207,8 +212,10 @@ SELECT
     toDate(hour) as date,
     organization_id,
     consumer_id,
+    '' as api_key_prefix,  -- Will be populated from requests_raw if needed
     plan_slug,
     chain_slug,
+    chain_type,
 
     sum(request_count) as request_count,
     sum(error_count) as error_count,
@@ -220,6 +227,9 @@ SELECT
 
     sum(total_response_size) as total_response_size,
 
+    avg(latency_p50) as latency_p50,
+    avg(latency_p95) as latency_p95,
+    avg(latency_p99) as latency_p99,
     avg(latency_p50) as avg_latency_ms,
     max(latency_max) as max_latency_ms,
 
@@ -231,7 +241,8 @@ GROUP BY
     organization_id,
     consumer_id,
     plan_slug,
-    chain_slug;
+    chain_slug,
+    chain_type;
 
 -- ============================================================================
 -- Error Tracking (Detailed error logs)
