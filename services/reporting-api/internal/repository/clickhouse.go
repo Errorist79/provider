@@ -61,13 +61,13 @@ func (r *ClickHouseRepository) Ping(ctx context.Context) error {
 func (r *ClickHouseRepository) GetUsageSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.UsageSummary, error) {
 	query := `
 		SELECT
-			sum(request_count) as total_requests,
-			sum(compute_units_used) as total_compute_units,
-			sum(total_response_size) / 1024 / 1024 / 1024 as total_egress_gb,
-			sum(error_count) as error_count,
-			(sum(error_count) / sum(request_count)) * 100 as error_rate_pct,
-			avg(latency_p95) as avg_latency_p95,
-			avg(latency_p99) as avg_latency_p99
+			sumMerge(request_count) AS total_requests,
+			sumMerge(compute_units_used) AS total_compute_units,
+			sumMerge(total_response_size) / 1024.0 / 1024.0 / 1024.0 AS total_egress_gb,
+			sumMerge(error_count) AS error_count,
+			(sumMerge(error_count) / nullIf(sumMerge(request_count), 0)) * 100 AS error_rate_pct,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 2)) AS latency_p95,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 3)) AS latency_p99
 		FROM usage_daily
 		WHERE organization_id = ?
 		  AND date >= ?
@@ -108,12 +108,12 @@ func (r *ClickHouseRepository) GetUsageByChain(ctx context.Context, orgID string
 		SELECT
 			chain_slug,
 			chain_type,
-			sum(request_count) as requests,
-			sum(compute_units_used) as compute_units,
-			sum(total_response_size) / 1024 / 1024 / 1024 as egress_gb,
-			sum(error_count) as error_count,
-			(sum(error_count) / sum(request_count)) * 100 as error_rate_pct,
-			avg(latency_p95) as avg_latency_p95
+			sumMerge(request_count) AS requests,
+			sumMerge(compute_units_used) AS compute_units,
+			sumMerge(total_response_size) / 1024.0 / 1024.0 / 1024.0 AS egress_gb,
+			sumMerge(error_count) AS error_count,
+			(sumMerge(error_count) / nullIf(sumMerge(request_count), 0)) * 100 AS error_rate_pct,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 2)) AS avg_latency_p95
 		FROM usage_daily
 		WHERE organization_id = ?
 		  AND date >= ?
@@ -159,10 +159,10 @@ func (r *ClickHouseRepository) GetUsageByMethod(ctx context.Context, orgID strin
 	query := `
 		SELECT
 			rpc_method,
-			sum(request_count) as requests,
-			sum(compute_units_used) as compute_units,
-			sum(error_count) as error_count,
-			avg(latency_p50) as avg_latency
+			sumMerge(request_count) AS requests,
+			sumMerge(compute_units_used) AS compute_units,
+			sumMerge(error_count) AS error_count,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 1)) AS latency_p50
 		FROM usage_hourly
 		WHERE organization_id = ?
 		  AND hour >= ?
@@ -202,12 +202,12 @@ func (r *ClickHouseRepository) GetDailyUsage(ctx context.Context, orgID string, 
 	query := `
 		SELECT
 			date,
-			sum(request_count) as requests,
-			sum(compute_units_used) as compute_units,
-			sum(total_response_size) / 1024 / 1024 / 1024 as egress_gb,
-			sum(error_count) as error_count,
-			(sum(error_count) / sum(request_count)) * 100 as error_rate_pct,
-			(sum(status_2xx_count) / sum(request_count)) * 100 as success_rate
+			sumMerge(request_count) AS requests,
+			sumMerge(compute_units_used) AS compute_units,
+			sumMerge(total_response_size) / 1024.0 / 1024.0 / 1024.0 AS egress_gb,
+			sumMerge(error_count) AS error_count,
+			(sumMerge(error_count) / nullIf(sumMerge(request_count), 0)) * 100 AS error_rate_pct,
+			(sumMerge(status_2xx_count) / nullIf(sumMerge(request_count), 0)) * 100 AS success_rate
 		FROM usage_daily
 		WHERE organization_id = ?
 		  AND date >= ?
@@ -248,13 +248,13 @@ func (r *ClickHouseRepository) GetHourlyUsage(ctx context.Context, orgID string,
 		SELECT
 			hour,
 			chain_slug,
-			sum(request_count) as requests,
-			sum(compute_units_used) as compute_units,
-			sum(total_response_size) / 1024 / 1024 / 1024 as egress_gb,
-			sum(error_count) as error_count,
-			avg(latency_p50) as latency_p50,
-			avg(latency_p95) as latency_p95,
-			avg(latency_p99) as latency_p99
+			sumMerge(request_count) AS requests,
+			sumMerge(compute_units_used) AS compute_units,
+			sumMerge(total_response_size) / 1024.0 / 1024.0 / 1024.0 AS egress_gb,
+			sumMerge(error_count) AS error_count,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 1)) AS latency_p50,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 2)) AS latency_p95,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 3)) AS latency_p99
 		FROM usage_hourly
 		WHERE organization_id = ?
 		  AND hour >= ?
@@ -315,12 +315,12 @@ func (r *ClickHouseRepository) GetAPIKeyUsage(ctx context.Context, keyPrefix str
 	// Get summary for this key
 	summaryQuery := `
 		SELECT
-			sum(request_count) as total_requests,
-			sum(compute_units_used) as total_compute_units,
-			sum(total_response_size) / 1024 / 1024 / 1024 as total_egress_gb,
-			sum(error_count) as error_count,
-			(sum(error_count) / sum(request_count)) * 100 as error_rate_pct,
-			avg(avg_latency_ms) as avg_latency
+			sumMerge(request_count) AS total_requests,
+			sumMerge(compute_units_used) AS total_compute_units,
+			sumMerge(total_response_size) / 1024.0 / 1024.0 / 1024.0 AS total_egress_gb,
+			sumMerge(error_count) AS error_count,
+			(sumMerge(error_count) / nullIf(sumMerge(request_count), 0)) * 100 AS error_rate_pct,
+			toFloat64(arrayElement(quantilesMerge(0.50, 0.95, 0.99)(latency_ms_quantiles), 2)) AS latency_p95
 		FROM usage_daily
 		WHERE api_key_prefix = ?
 		  AND date >= ?

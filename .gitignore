@@ -44,14 +44,8 @@ node_modules/
 package-lock.json
 yarn.lock
 
-# Python (if we add any Python services)
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-*.egg-info/
-
+# Go
+.gocache
 # Backup files
 *.backup
 *.bak
