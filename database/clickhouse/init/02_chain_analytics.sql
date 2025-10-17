@@ -80,15 +80,15 @@ CREATE TABLE IF NOT EXISTS chain_method_usage (
 
     -- Compute units
     total_compute_units UInt64 CODEC(T64, LZ4),
-    avg_compute_units Float32 CODEC(T64, LZ4),
+    avg_compute_units Float32 CODEC(Delta, LZ4),
 
     -- Performance
-    avg_latency_ms Float32 CODEC(T64, LZ4),
-    p95_latency_ms Float32 CODEC(T64, LZ4),
+    avg_latency_ms Float32 CODEC(Delta, LZ4),
+    p95_latency_ms Float32 CODEC(Delta, LZ4),
 
     -- Error rate
     error_count UInt64 CODEC(T64, LZ4),
-    error_rate Float32 CODEC(T64, LZ4)
+    error_rate Float32 CODEC(Delta, LZ4)
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(date)
@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS chain_org_usage (
     total_response_size UInt64 CODEC(T64, LZ4),
 
     -- Cost estimation (will be calculated based on pricing)
-    estimated_cost Float32 CODEC(T64, LZ4)
+    estimated_cost Float32 CODEC(Delta, LZ4)
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(date)
@@ -177,8 +177,8 @@ CREATE TABLE IF NOT EXISTS chain_popularity (
     unique_users UInt64 CODEC(T64, LZ4),
 
     -- Performance
-    avg_latency_ms Float32 CODEC(T64, LZ4),
-    success_rate Float32 CODEC(T64, LZ4)
+    avg_latency_ms Float32 CODEC(Delta, LZ4),
+    success_rate Float32 CODEC(Delta, LZ4)
 )
 ENGINE = SummingMergeTree()
 PARTITION BY toYYYYMM(hour)

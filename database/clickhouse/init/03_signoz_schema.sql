@@ -49,10 +49,8 @@ CREATE TABLE IF NOT EXISTS signoz_index_v2 (
 ) ENGINE = MergeTree()
 PARTITION BY toDate(timestamp)
 ORDER BY (serviceName, timestamp)
-TTL timestamp + INTERVAL 7 DAY
+TTL toDateTime(timestamp) + INTERVAL 7 DAY
 SETTINGS index_granularity = 8192;
-
-COMMENT ON TABLE signoz_index_v2 IS 'SigNoz distributed tracing index with RPC-specific attributes';
 
 -- ============================================================================
 -- Useful queries for RPC observability
