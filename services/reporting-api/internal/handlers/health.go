@@ -24,6 +24,10 @@ func NewHealthHandler(ch *repository.ClickHouseRepository, pg *repository.Postgr
 // LivenessProbe checks if the service is alive (always returns 200 if running)
 // GET /health/live
 func (h *HealthHandler) LivenessProbe(c *gin.Context) {
+	if c.Request.Method == http.MethodHead {
+		c.Status(http.StatusOK)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
 		"time":   time.Now().UTC(),
@@ -60,6 +64,11 @@ func (h *HealthHandler) ReadinessProbe(c *gin.Context) {
 	if !allHealthy {
 		status = "not_ready"
 		statusCode = http.StatusServiceUnavailable
+	}
+
+	if c.Request.Method == http.MethodHead {
+		c.Status(statusCode)
+		return
 	}
 
 	c.JSON(statusCode, gin.H{

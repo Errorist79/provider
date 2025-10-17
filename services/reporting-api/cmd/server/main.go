@@ -86,7 +86,9 @@ func main() {
 	// Health check endpoints (no auth required)
 	router.GET("/health", healthHandler.HealthCheck)
 	router.GET("/health/live", healthHandler.LivenessProbe)
+	router.HEAD("/health/live", healthHandler.LivenessProbe)
 	router.GET("/health/ready", healthHandler.ReadinessProbe)
+	router.HEAD("/health/ready", healthHandler.ReadinessProbe)
 	router.GET("/metrics", handlers.PrometheusHandler())
 
 	// API v1 routes (with optional auth)
