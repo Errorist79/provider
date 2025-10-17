@@ -313,7 +313,7 @@ services:
   # SigNoz Query Service
   # ============================================================================
   signoz-query-service:
-    image: signoz/query-service:${SIGNOZ_QUERY_SERVICE_VERSION:-0.38.0}
+    image: signoz/query-service:${SIGNOZ_QUERY_SERVICE_VERSION:-0.76.2}
     container_name: signoz-query-service
     command: ["-config=/root/config/prometheus.yml"]
     volumes:
@@ -341,7 +341,7 @@ services:
   # SigNoz Frontend
   # ============================================================================
   signoz-frontend:
-    image: signoz/frontend:${SIGNOZ_FRONTEND_VERSION:-0.38.0}
+    image: signoz/frontend:${SIGNOZ_FRONTEND_VERSION:-latest}
     container_name: signoz-frontend
     environment:
       FRONTEND_API_ENDPOINT: http://signoz-query-service:8080
