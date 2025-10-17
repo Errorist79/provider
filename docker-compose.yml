@@ -320,7 +320,7 @@ services:
       - ./monitoring/signoz/prometheus.yml:/root/config/prometheus.yml
       - signoz_data:/var/lib/signoz
     environment:
-      - ClickHouseUrl=tcp://clickhouse:9000
+      - ClickHouseUrl=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}
       - STORAGE=clickhouse
       - GODEBUG=netdns=go
       - TELEMETRY_ENABLED=false
