@@ -125,6 +125,31 @@ services:
     restart: unless-stopped
 
   # ============================================================================
+  # Zookeeper (for ClickHouse distributed coordination)
+  # ============================================================================
+  zookeeper:
+    image: zookeeper:${ZOOKEEPER_VERSION:-3.9}
+    container_name: zookeeper
+    hostname: zookeeper
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+    volumes:
+      - zookeeper_data:/data
+      - zookeeper_logs:/datalog
+    ports:
+      - "${ZOOKEEPER_PORT:-2181}:2181"
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
   # ClickHouse (for telemetry and analytics)
   # ============================================================================
   clickhouse:
@@ -151,103 +176,123 @@ services:
     networks:
       - rpc-gateway-net
     restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
 
   # ============================================================================
+  # SigNoz Schema Migrator (initializes ClickHouse schema)
+  # ============================================================================
+  signoz-schema-migrator:
+    image: signoz/signoz-schema-migrator:${SIGNOZ_MIGRATOR_VERSION:-0.129.6}
+    container_name: signoz-schema-migrator
+    command:
+      - "sync"
+      - "--dsn=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}"
+      - "--replication=false"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - rpc-gateway-net
+    restart: on-failure
+
+  # ============================================================================
   # Monitoring Stack
   # ============================================================================
-  prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
-    container_name: prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}'
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      - kong
+  #prometheus:
+  #  image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
+  #  container_name: prometheus
+  #  command:
+  #    - '--config.file=/etc/prometheus/prometheus.yml'
+  #    - '--storage.tsdb.path=/prometheus'
+  #    - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+  #    - '--web.console.templates=/usr/share/prometheus/consoles'
+  #    - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}'
+  #  volumes:
+  #    - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  #    - prometheus_data:/prometheus
+  #  ports:
+  #    - "${PROMETHEUS_PORT:-9090}:9090"
+  #  networks:
+  #    - rpc-gateway-net
+  #  restart: unless-stopped
+  #  depends_on:
+  #    - kong
 
-  grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-latest}
-    container_name: grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_USERS_ALLOW_SIGN_UP: false
-      GF_SERVER_ROOT_URL: http://localhost:3000
-      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS:-grafana-clickhouse-datasource}
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
-    ports:
-      - "${GRAFANA_PORT:-3000}:3000"
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-      - clickhouse
+  #grafana:
+  #  image: grafana/grafana:${GRAFANA_VERSION:-latest}
+  #  container_name: grafana
+  #  environment:
+  #    GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+  #    GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+  #    GF_USERS_ALLOW_SIGN_UP: false
+  #    GF_SERVER_ROOT_URL: http://localhost:3000
+  #    GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS:-grafana-clickhouse-datasource}
+  #  volumes:
+  #    - grafana_data:/var/lib/grafana
+  #    - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+  #    - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+  #  ports:
+  #    - "${GRAFANA_PORT:-3000}:3000"
+  #  networks:
+  #    - rpc-gateway-net
+  #  restart: unless-stopped
+  #  depends_on:
+  #    - prometheus
+  #    - clickhouse
 
   # ============================================================================
   # Unkey (Self-hosted API key management)
   # https://github.com/unkeyed/unkey
   # ============================================================================
-  unkey:
-    image: ghcr.io/unkeyed/unkey:${UNKEY_VERSION:-v2.0.28}
-    container_name: unkey
-    command: ["run"]
-    environment:
-      # Database connection
-      DATABASE_HOST: app-database
-      DATABASE_USERNAME: ${APP_DB_USER:-rpcuser}
-      DATABASE_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
-      DATABASE_NAME: ${APP_DB_NAME:-rpc_gateway}
+ # unkey:
+ #   image: ghcr.io/unkeyed/unkey:${UNKEY_VERSION:-v2.0.28}
+ #   container_name: unkey
+ #   command: ["run"]
+ #   environment:
+ #     # Database connection
+ #     DATABASE_HOST: app-database
+ #     DATABASE_USERNAME: ${APP_DB_USER:-rpcuser}
+ #     DATABASE_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
+ #     DATABASE_NAME: ${APP_DB_NAME:-rpc_gateway}
 
-      # Redis connection
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
+ #     # Redis connection
+ #     REDIS_HOST: redis
+ #     REDIS_PORT: 6379
+ #     REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
 
-      # Unkey configuration
-      UNKEY_API_URL: ${UNKEY_BASE_URL:-http://localhost:3001}
-      UNKEY_ROOT_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
+ #     # Unkey configuration
+ #     UNKEY_API_URL: ${UNKEY_BASE_URL:-http://localhost:3001}
+ #     UNKEY_ROOT_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
 
-      # Optional: Disable telemetry for self-hosted
-      UNKEY_DISABLE_TELEMETRY: "true"
-    ports:
-      - "${UNKEY_PORT:-3001}:8080"
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      app-database:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/liveness"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+ #     # Optional: Disable telemetry for self-hosted
+ #     UNKEY_DISABLE_TELEMETRY: "true"
+ #   ports:
+ #     - "${UNKEY_PORT:-3001}:8080"
+ #   networks:
+ #     - rpc-gateway-net
+ #   restart: unless-stopped
+ #   depends_on:
+ #     app-database:
+ #       condition: service_healthy
+ #     redis:
+ #       condition: service_healthy
+ #   healthcheck:
+ #     test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/liveness"]
+ #     interval: 10s
+ #     timeout: 5s
+ #     retries: 5
 
   # ============================================================================
   # OpenTelemetry Collector (for SigNoz)
   # ============================================================================
   otel-collector:
-    image: signoz/signoz-otel-collector:${SIGNOZ_VERSION:-0.88.11}
+    image: signoz/signoz-otel-collector:${SIGNOZ_OTEL_COLLECTOR_VERSION:-0.129.6}
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
@@ -268,7 +313,7 @@ services:
   # SigNoz Query Service
   # ============================================================================
   signoz-query-service:
-    image: signoz/query-service:${SIGNOZ_VERSION:-0.38.0}
+    image: signoz/query-service:${SIGNOZ_QUERY_SERVICE_VERSION:-0.38.0}
     container_name: signoz-query-service
     command: ["-config=/root/config/prometheus.yml"]
     volumes:
@@ -287,76 +332,78 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+      signoz-schema-migrator:
+        condition: service_completed_successfully
       otel-collector:
         condition: service_started
 
   # ============================================================================
   # SigNoz Frontend
   # ============================================================================
-  signoz-frontend:
-    image: signoz/frontend:${SIGNOZ_VERSION:-0.38.0}
-    container_name: signoz-frontend
-    environment:
-      - FRONTEND_API_ENDPOINT=http://signoz-query-service:8080
-    ports:
-      - "${SIGNOZ_PORT:-3301}:3301"
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      - signoz-query-service
+ # signoz-frontend:
+ #   image: signoz/frontend:${SIGNOZ_FRONTEND_VERSION:-0.38.0}
+ #   container_name: signoz-frontend
+ #   environment:
+ #     - FRONTEND_API_ENDPOINT=http://signoz-query-service:8080
+ #   ports:
+ #     - "${SIGNOZ_PORT:-3301}:3301"
+ #   networks:
+ #     - rpc-gateway-net
+ #   restart: unless-stopped
+ #   depends_on:
+ #     - signoz-query-service
 
   # ============================================================================
   # Reporting API (Usage Analytics & Metrics)
   # ============================================================================
-  reporting-api:
-    build:
-      context: ./services/reporting-api
-      dockerfile: Dockerfile
-    container_name: reporting-api
-    environment:
-      # Server configuration
-      REPORTING_API_SERVER_PORT: "8080"
-      REPORTING_API_SERVER_ENVIRONMENT: ${ENVIRONMENT:-development}
+  # reporting-api:
+  #   build:
+  #     context: ./services/reporting-api
+  #     dockerfile: Dockerfile
+  #   container_name: reporting-api
+  #   environment:
+  #     # Server configuration
+  #     REPORTING_API_SERVER_PORT: "8080"
+  #     REPORTING_API_SERVER_ENVIRONMENT: ${ENVIRONMENT:-development}
 
-      # ClickHouse connection
-      REPORTING_API_CLICKHOUSE_HOST: clickhouse
-      REPORTING_API_CLICKHOUSE_PORT: 9000
-      REPORTING_API_CLICKHOUSE_DATABASE: ${CLICKHOUSE_DB:-telemetry}
-      REPORTING_API_CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-clickhouse}
-      REPORTING_API_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+  #     # ClickHouse connection
+  #     REPORTING_API_CLICKHOUSE_HOST: clickhouse
+  #     REPORTING_API_CLICKHOUSE_PORT: 9000
+  #     REPORTING_API_CLICKHOUSE_DATABASE: ${CLICKHOUSE_DB:-telemetry}
+  #     REPORTING_API_CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-clickhouse}
+  #     REPORTING_API_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
 
-      # PostgreSQL connection
-      REPORTING_API_POSTGRESQL_HOST: app-database
-      REPORTING_API_POSTGRESQL_PORT: 5432
-      REPORTING_API_POSTGRESQL_DATABASE: ${APP_DB_NAME:-rpc_gateway}
-      REPORTING_API_POSTGRESQL_USERNAME: ${APP_DB_USER:-rpcuser}
-      REPORTING_API_POSTGRESQL_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
-      REPORTING_API_POSTGRESQL_SSLMODE: disable
+  #     # PostgreSQL connection
+  #     REPORTING_API_POSTGRESQL_HOST: app-database
+  #     REPORTING_API_POSTGRESQL_PORT: 5432
+  #     REPORTING_API_POSTGRESQL_DATABASE: ${APP_DB_NAME:-rpc_gateway}
+  #     REPORTING_API_POSTGRESQL_USERNAME: ${APP_DB_USER:-rpcuser}
+  #     REPORTING_API_POSTGRESQL_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
+  #     REPORTING_API_POSTGRESQL_SSLMODE: disable
 
-      # Authentication (Phase 6: Simple API key, Phase 7+: Unkey integration)
-      REPORTING_API_AUTH_ENABLED: ${REPORTING_API_AUTH_ENABLED:-false}
-      REPORTING_API_AUTH_ADMINAPIKEY: ${REPORTING_API_ADMIN_KEY:-change_me_in_production}
+  #     # Authentication (Phase 6: Simple API key, Phase 7+: Unkey integration)
+  #     REPORTING_API_AUTH_ENABLED: ${REPORTING_API_AUTH_ENABLED:-false}
+  #     REPORTING_API_AUTH_ADMINAPIKEY: ${REPORTING_API_ADMIN_KEY:-change_me_in_production}
 
-      # Logging
-      REPORTING_API_LOGGING_LEVEL: ${LOG_LEVEL:-info}
-      REPORTING_API_LOGGING_FORMAT: json
-    ports:
-      - "${REPORTING_API_PORT:-4000}:8080"
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-      app-database:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/health/live"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+  #     # Logging
+  #     REPORTING_API_LOGGING_LEVEL: ${LOG_LEVEL:-info}
+  #     REPORTING_API_LOGGING_FORMAT: json
+  #   ports:
+  #     - "${REPORTING_API_PORT:-4000}:8080"
+  #   networks:
+  #     - rpc-gateway-net
+  #   restart: unless-stopped
+  #   depends_on:
+  #     clickhouse:
+  #       condition: service_healthy
+  #     app-database:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--spider", "-q", "localhost:8080/health/live"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 10s
 
 networks:
   rpc-gateway-net:
@@ -367,6 +414,8 @@ volumes:
   kong_data:
   app_data:
   redis_data:
+  zookeeper_data:
+  zookeeper_logs:
   clickhouse_data:
   prometheus_data:
   grafana_data:

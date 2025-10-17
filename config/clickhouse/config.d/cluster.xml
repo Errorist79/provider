@@ -1,0 +1,34 @@
+<clickhouse>
+    <!--
+        Single-node cluster configuration for SigNoz with Zookeeper
+        This satisfies SigNoz's hardcoded "cluster" requirement
+    -->
+
+    <!-- Zookeeper configuration for distributed coordination -->
+    <zookeeper>
+        <node>
+            <host>zookeeper</host>
+            <port>2181</port>
+        </node>
+    </zookeeper>
+
+    <!-- Cluster definition -->
+    <remote_servers>
+        <cluster>
+            <shard>
+                <internal_replication>false</internal_replication>
+                <replica>
+                    <host>clickhouse</host>
+                    <port>9000</port>
+                </replica>
+            </shard>
+        </cluster>
+    </remote_servers>
+
+    <!-- Macros for distributed table creation -->
+    <macros>
+        <cluster>cluster</cluster>
+        <shard>1</shard>
+        <replica>replica_1</replica>
+    </macros>
+</clickhouse>
