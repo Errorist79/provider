@@ -12,7 +12,7 @@ info "Initializing Unkey..."
 # Wait for Unkey to be ready
 info "Waiting for Unkey to start..."
 for i in {1..30}; do
-    if curl -sf "$UNKEY_API/api/v1/liveness" >/dev/null 2>&1; then
+    if curl -sf "$UNKEY_API/v2/liveness" >/dev/null 2>&1; then
         success "Unkey is ready"
         break
     fi

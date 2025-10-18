@@ -16,7 +16,7 @@ Environment variables use the `AUTH_BRIDGE_` prefix. Key settings include:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `AUTH_BRIDGE_SERVER_PORT` | HTTP listen port | `8081` |
-| `AUTH_BRIDGE_UNKEY_BASEURL` | Base URL of the Unkey API | `http://unkey:8080` |
+| `AUTH_BRIDGE_UNKEY_BASEURL` | Base URL of the Unkey API | `http://unkey:7070` |
 | `AUTH_BRIDGE_UNKEY_API_KEY` | Root/workspace key for verification | required |
 | `AUTH_BRIDGE_CACHE_ENABLED` | Toggle Redis cache | `true` |
 | `AUTH_BRIDGE_CACHE_TTL` | Cache TTL (Go duration) | `60s` |

@@ -250,14 +250,14 @@ services:
   # Unkey MySQL (dedicated datastore for Unkey)
   # ============================================================================
   unkey-mysql:
-    image: mysql:8.4
+    image: mysql:8.0
     container_name: unkey-mysql
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: ${UNKEY_MYSQL_ROOT_PASSWORD:-change_me}
       MYSQL_DATABASE: ${UNKEY_MYSQL_DB:-unkey}
       MYSQL_USER: ${UNKEY_MYSQL_USER:-unkey}
       MYSQL_PASSWORD: ${UNKEY_MYSQL_PASSWORD:-unkeypass}
-      MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
     healthcheck:
       test:
         - CMD
@@ -272,6 +272,7 @@ services:
       retries: 5
     volumes:
       - unkey_mysql_data:/var/lib/mysql
+      - ./database/mysql/init:/docker-entrypoint-initdb.d
     networks:
       - rpc-gateway-net
     restart: unless-stopped
@@ -286,13 +287,13 @@ services:
     command:
       - run
       - api
-      - --database-primary=${UNKEY_DATABASE_PRIMARY}
-      - --redis-url=${UNKEY_REDIS_URL}
+      - --database-primary=${UNKEY_MYSQL_USER:-unkey}:${UNKEY_MYSQL_PASSWORD:-unkeypass}@tcp(unkey-mysql:3306)/${UNKEY_MYSQL_DB:-unkey}?parseTime=true
+      - --redis-url=redis://:${REDIS_PASSWORD:-redispass}@redis:6379
     environment:
       UNKEY_ROOT_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
       UNKEY_DISABLE_TELEMETRY: "true"
     ports:
-      - "${UNKEY_PORT:-3001}:8080"
+      - "${UNKEY_PORT:-3001}:7070"
     networks:
       - rpc-gateway-net
     restart: unless-stopped
@@ -302,7 +303,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/liveness"]
+      test: ["CMD", "wget", "--spider", "-q", "localhost:7070/v2/liveness"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -317,7 +318,7 @@ services:
     container_name: auth-bridge
     environment:
       AUTH_BRIDGE_SERVER_PORT: "8081"
-      AUTH_BRIDGE_UNKEY_BASEURL: ${UNKEY_BASE_URL:-http://unkey:8080}
+      AUTH_BRIDGE_UNKEY_BASEURL: ${UNKEY_BASE_URL:-http://unkey:7070}
       AUTH_BRIDGE_UNKEY_API_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
       AUTH_BRIDGE_CACHE_ENABLED: "true"
       AUTH_BRIDGE_CACHE_TTL: 60s
