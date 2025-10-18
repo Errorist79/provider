@@ -188,7 +188,7 @@ services:
   # SigNoz Schema Migrator (initializes ClickHouse schema)
   # ============================================================================
   signoz-schema-migrator:
-    image: signoz/signoz-schema-migrator:${SIGNOZ_MIGRATOR_VERSION:-0.129.6}
+    image: signoz/signoz-schema-migrator:${SIGNOZ_MIGRATOR_VERSION:-0.129.7}
     container_name: signoz-schema-migrator
     command:
       - "sync"
@@ -292,7 +292,7 @@ services:
   # OpenTelemetry Collector (for SigNoz)
   # ============================================================================
   otel-collector:
-    image: signoz/signoz-otel-collector:${SIGNOZ_OTEL_COLLECTOR_VERSION:-0.129.6}
+    image: signoz/signoz-otel-collector:${SIGNOZ_OTEL_COLLECTOR_VERSION:-0.129.7}
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
@@ -308,24 +308,27 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+      signoz:
+        condition: service_started
 
   # ============================================================================
-  # SigNoz Query Service
+  # SigNoz Bundle (Query Service + Frontend)
   # ============================================================================
-  signoz-query-service:
-    image: signoz/query-service:${SIGNOZ_QUERY_SERVICE_VERSION:-0.76.2}
-    container_name: signoz-query-service
-    command: ["-config=/root/config/prometheus.yml"]
+  signoz:
+    image: signoz/signoz:${SIGNOZ_VERSION:-v0.97.0}
+    container_name: signoz
+    command:
+      - --config=/root/config/prometheus.yml
+    ports:
+      - "${SIGNOZ_PORT:-3301}:8080"
     volumes:
       - ./monitoring/signoz/prometheus.yml:/root/config/prometheus.yml
       - signoz_data:/var/lib/signoz
     environment:
-      - ClickHouseUrl=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}
+      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}
+      - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
       - STORAGE=clickhouse
-      - GODEBUG=netdns=go
       - TELEMETRY_ENABLED=false
-    ports:
-      - "8080:8080"
     networks:
       - rpc-gateway-net
     restart: unless-stopped
@@ -334,27 +337,6 @@ services:
         condition: service_healthy
       signoz-schema-migrator:
         condition: service_completed_successfully
-      otel-collector:
-        condition: service_started
-
-  # ============================================================================
-  # SigNoz Frontend
-  # ============================================================================
-  signoz-frontend:
-    image: signoz/frontend:${SIGNOZ_FRONTEND_VERSION:-latest}
-    container_name: signoz-frontend
-    environment:
-      FRONTEND_API_ENDPOINT: http://signoz-query-service:8080
-    volumes:
-      - ./config/signoz/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    ports:
-      - "${SIGNOZ_PORT:-3301}:3301"
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      signoz-query-service:
-        condition: service_started
 
   # ============================================================================
   # Reporting API (Usage Analytics & Metrics)
