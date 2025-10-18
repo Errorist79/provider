@@ -320,7 +320,7 @@ services:
     environment:
       AUTH_BRIDGE_SERVER_PORT: "8081"
       AUTH_BRIDGE_UNKEY_BASEURL: ${UNKEY_BASE_URL:-http://unkey:7070}
-      AUTH_BRIDGE_UNKEY_API_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
+      AUTH_BRIDGE_UNKEY_API_KEY: ${UNKEY_ROOT_KEY:-unkey_root}
       AUTH_BRIDGE_CACHE_ENABLED: "true"
       AUTH_BRIDGE_CACHE_TTL: 60s
       AUTH_BRIDGE_CACHE_REDIS_ADDR: redis:6379

@@ -22,9 +22,9 @@ type ServerConfig struct {
 }
 
 type UnkeyConfig struct {
-	BaseURL        string
-	APIKey         string
-	RequestTimeout time.Duration
+	BaseURL        string        `mapstructure:"baseurl"`
+	APIKey         string        `mapstructure:"api_key"`
+	RequestTimeout time.Duration `mapstructure:"requesttimeout"`
 }
 
 type CacheConfig struct {
@@ -47,9 +47,26 @@ func Load() (*Config, error) {
 
 	viper.SetEnvPrefix("AUTH_BRIDGE")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
-
 	setDefaults()
+
+	if err := bindEnvVars(
+		"server.port",
+		"server.readtimeout",
+		"server.writetimeout",
+		"server.shutdowntimeout",
+		"unkey.baseurl",
+		"unkey.api_key",
+		"unkey.requesttimeout",
+		"cache.enabled",
+		"cache.ttl",
+		"cache.redis.addr",
+		"cache.redis.password",
+		"cache.redis.db",
+	); err != nil {
+		return nil, err
+	}
+
+	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -82,4 +99,14 @@ func setDefaults() {
 	viper.SetDefault("cache.ttl", 60*time.Second)
 	viper.SetDefault("cache.redis.addr", "redis:6379")
 	viper.SetDefault("cache.redis.db", 0)
+}
+
+func bindEnvVars(keys ...string) error {
+	for _, key := range keys {
+		envKey := "AUTH_BRIDGE_" + strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+		if err := viper.BindEnv(key, envKey); err != nil {
+			return fmt.Errorf("failed to bind config key %s to environment: %w", key, err)
+		}
+	}
+	return nil
 }
