@@ -15,10 +15,16 @@ import (
 	"github.com/hoodrun/rpc-gateway/reporting-api/internal/handlers"
 	"github.com/hoodrun/rpc-gateway/reporting-api/internal/middleware"
 	"github.com/hoodrun/rpc-gateway/reporting-api/internal/repository"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
 func main() {
+	// Load .env when present for local development
+	if err := godotenv.Load(); err != nil {
+		log.Printf("warning: unable to load .env file: %v", err)
+	}
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {

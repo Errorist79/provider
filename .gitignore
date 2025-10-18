@@ -50,3 +50,4 @@ yarn.lock
 *.backup
 *.bak
 examples
+services/reporting-api/server
