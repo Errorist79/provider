@@ -187,19 +187,19 @@ services:
   # ============================================================================
   # SigNoz Schema Migrator (initializes ClickHouse schema)
   # ============================================================================
-  signoz-schema-migrator:
-    image: signoz/signoz-schema-migrator:${SIGNOZ_MIGRATOR_VERSION:-0.129.7}
-    container_name: signoz-schema-migrator
-    command:
-      - "sync"
-      - "--dsn=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}"
-      - "--replication=false"
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    networks:
-      - rpc-gateway-net
-    restart: on-failure
+  # signoz-schema-migrator:
+  #   image: signoz/signoz-schema-migrator:${SIGNOZ_MIGRATOR_VERSION:-0.129.7}
+  #   container_name: signoz-schema-migrator
+  #   command:
+  #     - "sync"
+  #     - "--dsn=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}"
+  #     - "--replication=false"
+  #   depends_on:
+  #     clickhouse:
+  #       condition: service_healthy
+  #   networks:
+  #     - rpc-gateway-net
+  #   restart: on-failure
 
   # ============================================================================
   # Monitoring Stack
@@ -312,25 +312,25 @@ services:
   # ============================================================================
   # Auth Bridge (Unkey verification adapter)
   # ============================================================================
-  auth-bridge:
-    build:
-      context: ./services/auth-bridge
-      dockerfile: Dockerfile
-    container_name: auth-bridge
-    environment:
-      AUTH_BRIDGE_SERVER_PORT: "8081"
-      AUTH_BRIDGE_UNKEY_BASEURL: ${UNKEY_BASE_URL:-http://unkey:7070}
-      AUTH_BRIDGE_UNKEY_API_KEY: ${UNKEY_ROOT_KEY:-unkey_root}
-      AUTH_BRIDGE_CACHE_ENABLED: "true"
-      AUTH_BRIDGE_CACHE_TTL: 60s
-      AUTH_BRIDGE_CACHE_REDIS_ADDR: redis:6379
-      AUTH_BRIDGE_CACHE_REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      redis:
-        condition: service_healthy
+  # auth-bridge:
+  #   build:
+  #     context: ./services/auth-bridge
+  #     dockerfile: Dockerfile
+  #   container_name: auth-bridge
+  #   environment:
+  #     AUTH_BRIDGE_SERVER_PORT: "8081"
+  #     AUTH_BRIDGE_UNKEY_BASEURL: ${UNKEY_BASE_URL:-http://unkey:7070}
+  #     AUTH_BRIDGE_UNKEY_API_KEY: ${UNKEY_ROOT_KEY:-unkey_root}
+  #     AUTH_BRIDGE_CACHE_ENABLED: "true"
+  #     AUTH_BRIDGE_CACHE_TTL: 60s
+  #     AUTH_BRIDGE_CACHE_REDIS_ADDR: redis:6379
+  #     AUTH_BRIDGE_CACHE_REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
+  #   networks:
+  #     - rpc-gateway-net
+  #   restart: unless-stopped
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
 
   # ============================================================================
   # OpenTelemetry Collector (for SigNoz)
@@ -358,81 +358,81 @@ services:
   # ============================================================================
   # SigNoz Bundle (Query Service + Frontend)
   # ============================================================================
-  signoz:
-    image: signoz/signoz:${SIGNOZ_VERSION:-v0.97.0}
-    container_name: signoz
-    command:
-      - --config=/root/config/prometheus.yml
-    ports:
-      - "${SIGNOZ_PORT:-3301}:8080"
-    volumes:
-      - ./monitoring/signoz/prometheus.yml:/root/config/prometheus.yml
-      - signoz_data:/var/lib/signoz
-    environment:
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}
-      - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
-      - STORAGE=clickhouse
-      - TELEMETRY_ENABLED=false
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-      signoz-schema-migrator:
-        condition: service_completed_successfully
+  # signoz:
+  #   image: signoz/signoz:${SIGNOZ_VERSION:-v0.97.0}
+  #   container_name: signoz
+  #   command:
+  #     - --config=/root/config/prometheus.yml
+  #   ports:
+  #     - "${SIGNOZ_PORT:-3301}:8080"
+  #   volumes:
+  #     - ./monitoring/signoz/prometheus.yml:/root/config/prometheus.yml
+  #     - signoz_data:/var/lib/signoz
+  #   environment:
+  #     - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000?username=${CLICKHOUSE_USER:-clickhouse}&password=${CLICKHOUSE_PASSWORD:-clickhouse}
+  #     - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+  #     - STORAGE=clickhouse
+  #     - TELEMETRY_ENABLED=false
+  #   networks:
+  #     - rpc-gateway-net
+  #   restart: unless-stopped
+  #   depends_on:
+  #     clickhouse:
+  #       condition: service_healthy
+  #     signoz-schema-migrator:
+  #       condition: service_completed_successfully
 
   # ============================================================================
   # Reporting API (Usage Analytics & Metrics)
   # ============================================================================
-  reporting-api:
-    build:
-      context: ./services/reporting-api
-      dockerfile: Dockerfile
-    container_name: reporting-api
-    environment:
-      # Server configuration
-      REPORTING_API_SERVER_PORT: "8080"
-      REPORTING_API_SERVER_ENVIRONMENT: ${ENVIRONMENT:-development}
-
-      # ClickHouse connection
-      REPORTING_API_CLICKHOUSE_HOST: clickhouse
-      REPORTING_API_CLICKHOUSE_PORT: 9000
-      REPORTING_API_CLICKHOUSE_DATABASE: ${CLICKHOUSE_DB:-telemetry}
-      REPORTING_API_CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-clickhouse}
-      REPORTING_API_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
-
-      # PostgreSQL connection
-      REPORTING_API_POSTGRESQL_HOST: app-database
-      REPORTING_API_POSTGRESQL_PORT: 5432
-      REPORTING_API_POSTGRESQL_DATABASE: ${APP_DB_NAME:-rpc_gateway}
-      REPORTING_API_POSTGRESQL_USERNAME: ${APP_DB_USER:-rpcuser}
-      REPORTING_API_POSTGRESQL_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
-      REPORTING_API_POSTGRESQL_SSLMODE: disable
-
-      # Authentication (Phase 6: Simple API key, Phase 7+: Unkey integration)
-      REPORTING_API_AUTH_ENABLED: ${REPORTING_API_AUTH_ENABLED:-true}
-      REPORTING_API_AUTH_ADMINAPIKEY: ${REPORTING_API_ADMIN_KEY:-reporting_key}
-
-      # Logging
-      REPORTING_API_LOGGING_LEVEL: ${LOG_LEVEL:-info}
-      REPORTING_API_LOGGING_FORMAT: json
-    ports:
-      - "${REPORTING_API_PORT:-4000}:8080"
-    networks:
-      - rpc-gateway-net
-    restart: unless-stopped
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-      app-database:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/health/live"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+  # reporting-api:
+  #   build:
+  #     context: ./services/reporting-api
+  #     dockerfile: Dockerfile
+  #   container_name: reporting-api
+  #   environment:
+  #     # Server configuration
+  #     REPORTING_API_SERVER_PORT: "8080"
+  #     REPORTING_API_SERVER_ENVIRONMENT: ${ENVIRONMENT:-development}
+  #
+  #     # ClickHouse connection
+  #     REPORTING_API_CLICKHOUSE_HOST: clickhouse
+  #     REPORTING_API_CLICKHOUSE_PORT: 9000
+  #     REPORTING_API_CLICKHOUSE_DATABASE: ${CLICKHOUSE_DB:-telemetry}
+  #     REPORTING_API_CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-clickhouse}
+  #     REPORTING_API_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+  #
+  #     # PostgreSQL connection
+  #     REPORTING_API_POSTGRESQL_HOST: app-database
+  #     REPORTING_API_POSTGRESQL_PORT: 5432
+  #     REPORTING_API_POSTGRESQL_DATABASE: ${APP_DB_NAME:-rpc_gateway}
+  #     REPORTING_API_POSTGRESQL_USERNAME: ${APP_DB_USER:-rpcuser}
+  #     REPORTING_API_POSTGRESQL_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
+  #     REPORTING_API_POSTGRESQL_SSLMODE: disable
+  #
+  #     # Authentication (Phase 6: Simple API key, Phase 7+: Unkey integration)
+  #     REPORTING_API_AUTH_ENABLED: ${REPORTING_API_AUTH_ENABLED:-true}
+  #     REPORTING_API_AUTH_ADMINAPIKEY: ${REPORTING_API_ADMIN_KEY:-reporting_key}
+  #
+  #     # Logging
+  #     REPORTING_API_LOGGING_LEVEL: ${LOG_LEVEL:-info}
+  #     REPORTING_API_LOGGING_FORMAT: json
+  #   ports:
+  #     - "${REPORTING_API_PORT:-4000}:8080"
+  #   networks:
+  #     - rpc-gateway-net
+  #   restart: unless-stopped
+  #   depends_on:
+  #     clickhouse:
+  #       condition: service_healthy
+  #     app-database:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--spider", "-q", "localhost:8080/health/live"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 10s
 
 networks:
   rpc-gateway-net:
