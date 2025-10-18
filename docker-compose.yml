@@ -250,43 +250,43 @@ services:
   # Unkey (Self-hosted API key management)
   # https://github.com/unkeyed/unkey
   # ============================================================================
- # unkey:
- #   image: ghcr.io/unkeyed/unkey:${UNKEY_VERSION:-v2.0.28}
- #   container_name: unkey
- #   command: ["run"]
- #   environment:
- #     # Database connection
- #     DATABASE_HOST: app-database
- #     DATABASE_USERNAME: ${APP_DB_USER:-rpcuser}
- #     DATABASE_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
- #     DATABASE_NAME: ${APP_DB_NAME:-rpc_gateway}
+  unkey:
+    image: ghcr.io/unkeyed/unkey:${UNKEY_VERSION:-v2.0.28}
+    container_name: unkey
+    command: ["run", "api"]
+    environment:
+      # Database connection
+      DATABASE_HOST: app-database
+      DATABASE_USERNAME: ${APP_DB_USER:-rpcuser}
+      DATABASE_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
+      DATABASE_NAME: ${APP_DB_NAME:-rpc_gateway}
 
- #     # Redis connection
- #     REDIS_HOST: redis
- #     REDIS_PORT: 6379
- #     REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
+      # Redis connection
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
 
- #     # Unkey configuration
- #     UNKEY_API_URL: ${UNKEY_BASE_URL:-http://localhost:3001}
- #     UNKEY_ROOT_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
+      # Unkey configuration
+      UNKEY_API_URL: ${UNKEY_BASE_URL:-http://localhost:3001}
+      UNKEY_ROOT_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
 
- #     # Optional: Disable telemetry for self-hosted
- #     UNKEY_DISABLE_TELEMETRY: "true"
- #   ports:
- #     - "${UNKEY_PORT:-3001}:8080"
- #   networks:
- #     - rpc-gateway-net
- #   restart: unless-stopped
- #   depends_on:
- #     app-database:
- #       condition: service_healthy
- #     redis:
- #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/liveness"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+      # Optional: Disable telemetry for self-hosted
+      UNKEY_DISABLE_TELEMETRY: "true"
+    ports:
+      - "${UNKEY_PORT:-3001}:8080"
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+    depends_on:
+      app-database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/liveness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ============================================================================
   # Auth Bridge (Unkey verification adapter)
