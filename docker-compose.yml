@@ -247,30 +247,49 @@ services:
   #    - clickhouse
 
   # ============================================================================
+  # Unkey MySQL (dedicated datastore for Unkey)
+  # ============================================================================
+  unkey-mysql:
+    image: mysql:8.4
+    container_name: unkey-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${UNKEY_MYSQL_ROOT_PASSWORD:-change_me}
+      MYSQL_DATABASE: ${UNKEY_MYSQL_DB:-unkey}
+      MYSQL_USER: ${UNKEY_MYSQL_USER:-unkey}
+      MYSQL_PASSWORD: ${UNKEY_MYSQL_PASSWORD:-unkeypass}
+      MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u${UNKEY_MYSQL_USER:-unkey}
+        - -p${UNKEY_MYSQL_PASSWORD:-unkeypass}
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - unkey_mysql_data:/var/lib/mysql
+    networks:
+      - rpc-gateway-net
+    restart: unless-stopped
+
+  # ============================================================================
   # Unkey (Self-hosted API key management)
   # https://github.com/unkeyed/unkey
   # ============================================================================
   unkey:
     image: ghcr.io/unkeyed/unkey:${UNKEY_VERSION:-v2.0.28}
     container_name: unkey
-    command: ["run", "api"]
+    command:
+      - run
+      - api
+      - --database-primary=${UNKEY_DATABASE_PRIMARY}
+      - --redis-url=${UNKEY_REDIS_URL}
     environment:
-      # Database connection
-      DATABASE_HOST: app-database
-      DATABASE_USERNAME: ${APP_DB_USER:-rpcuser}
-      DATABASE_PASSWORD: ${APP_DB_PASSWORD:-rpcpass}
-      DATABASE_NAME: ${APP_DB_NAME:-rpc_gateway}
-
-      # Redis connection
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
-
-      # Unkey configuration
-      UNKEY_API_URL: ${UNKEY_BASE_URL:-http://localhost:3001}
       UNKEY_ROOT_KEY: ${UNKEY_ROOT_KEY:-unkey_root_change_me_in_production}
-
-      # Optional: Disable telemetry for self-hosted
       UNKEY_DISABLE_TELEMETRY: "true"
     ports:
       - "${UNKEY_PORT:-3001}:8080"
@@ -278,7 +297,7 @@ services:
       - rpc-gateway-net
     restart: unless-stopped
     depends_on:
-      app-database:
+      unkey-mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -428,3 +447,4 @@ volumes:
   prometheus_data:
   grafana_data:
   signoz_data:
+  unkey_mysql_data:
