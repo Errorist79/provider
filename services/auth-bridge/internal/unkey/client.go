@@ -2,7 +2,6 @@ package unkey
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,12 +16,7 @@ type Client struct {
 	sdk *v2.Unkey
 }
 
-var ErrInvalidKey = errors.New("unkey: invalid api key")
-
 func New(cfg config.UnkeyConfig) (*Client, error) {
-	if cfg.BaseURL == "" {
-		return nil, fmt.Errorf("unkey base url is required")
-	}
 	if cfg.APIKey == "" {
 		return nil, fmt.Errorf("unkey api key is required")
 	}
@@ -36,8 +30,11 @@ func New(cfg config.UnkeyConfig) (*Client, error) {
 
 	opts := []v2.SDKOption{
 		v2.WithSecurity(cfg.APIKey),
-		v2.WithServerURL(cfg.BaseURL),
 		v2.WithClient(httpClient),
+	}
+
+	if cfg.BaseURL != "" {
+		opts = append(opts, v2.WithServerURL(cfg.BaseURL))
 	}
 
 	sdkClient := v2.New(opts...)
@@ -61,37 +58,76 @@ func (c *Client) VerifyKey(ctx context.Context, apiKey string) (*models.Verifica
 	}
 
 	data := body.GetData()
-	if !data.GetValid() {
-		return nil, ErrInvalidKey
-	}
+	meta := body.GetMeta()
 
 	verification := &models.Verification{
-		Valid: data.GetValid(),
-		Meta:  data.GetMeta(),
+		Valid:       data.GetValid(),
+		Code:        string(data.GetCode()),
+		Meta:        data.GetMeta(),
+		Permissions: data.GetPermissions(),
+		Roles:       data.GetRoles(),
+		Credits:     data.GetCredits(),
+		Enabled:     data.GetEnabled(),
+		Expires:     data.GetExpires(),
+		RequestID:   meta.GetRequestID(),
 	}
 
 	if keyID := data.GetKeyID(); keyID != nil {
 		verification.KeyID = *keyID
 	}
 
+	if name := data.GetName(); name != nil {
+		verification.KeyName = *name
+	}
+
 	if identity := data.GetIdentity(); identity != nil {
-		verification.OwnerID = identity.GetID()
+		mapped := &models.Identity{
+			ID:         identity.GetID(),
+			ExternalID: identity.GetExternalID(),
+			Meta:       identity.GetMeta(),
+		}
+
+		if rls := identity.GetRatelimits(); len(rls) > 0 {
+			mapped.RateLimits = make([]models.IdentityRateLimit, 0, len(rls))
+			for _, rl := range rls {
+				mapped.RateLimits = append(mapped.RateLimits, models.IdentityRateLimit{
+					ID:        rl.GetID(),
+					Name:      rl.GetName(),
+					Limit:     rl.GetLimit(),
+					Duration:  rl.GetDuration(),
+					AutoApply: rl.GetAutoApply(),
+				})
+			}
+		}
+
+		verification.Identity = mapped
+		verification.OwnerID = mapped.ID
 		if verification.OwnerID == "" {
-			verification.OwnerID = identity.GetExternalID()
+			verification.OwnerID = mapped.ExternalID
 		}
 	}
 
-	if verification.OwnerID == "" {
-		verification.OwnerID = verification.KeyID
-	}
-
 	if rl := data.GetRatelimits(); len(rl) > 0 {
-		verification.RateLimit = map[string]interface{}{
-			"ratelimits": rl,
+		verification.RateLimits = make([]models.RateLimit, 0, len(rl))
+		for _, r := range rl {
+			verification.RateLimits = append(verification.RateLimits, models.RateLimit{
+				ID:        r.GetID(),
+				Name:      r.GetName(),
+				Limit:     r.GetLimit(),
+				Duration:  r.GetDuration(),
+				Reset:     r.GetReset(),
+				Remaining: r.GetRemaining(),
+				Exceeded:  r.GetExceeded(),
+				AutoApply: r.GetAutoApply(),
+			})
 		}
 	}
 
 	verification.Normalize()
+
+	if verification.Meta == nil {
+		verification.Meta = map[string]interface{}{}
+	}
 
 	return verification, nil
 }
