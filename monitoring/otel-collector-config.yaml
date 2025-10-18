@@ -21,6 +21,17 @@ processors:
     timeout: 10s
     send_batch_size: 1024
 
+  # Generate span metrics required by SigNoz dashboards
+  signozspanmetrics/delta:
+    metrics_exporter: signozclickhousemetrics
+    metrics_flush_interval: 60s
+    latency_histogram_buckets: [100us, 1ms, 2ms, 6ms, 10ms, 50ms, 100ms, 250ms, 500ms, 1000ms, 1400ms, 2000ms, 5s, 10s, 20s, 40s, 60s]
+    dimensions:
+      - name: service.namespace
+        default: default
+      - name: deployment.environment
+        default: default
+
   # Resource detection
   resourcedetection:
     detectors: [env, system, docker]
@@ -72,7 +83,7 @@ service:
     # Traces pipeline
     traces:
       receivers: [otlp]
-      processors: [batch, resourcedetection, attributes, transform]
+      processors: [resourcedetection, attributes, transform, signozspanmetrics/delta, batch]
       exporters: [clickhousetraces, debug]
 
     # Metrics pipeline
