@@ -304,7 +304,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:7070/v2/liveness"]
+      test: ["CMD", "/ko-app/go", "version"]
       interval: 10s
       timeout: 5s
       retries: 5
