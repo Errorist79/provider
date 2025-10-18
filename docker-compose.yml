@@ -37,7 +37,10 @@ services:
       - rpc-gateway-net
 
   kong:
-    image: kong:${KONG_VERSION:-3.6}
+    build:
+      context: .
+      dockerfile: ./services/kong/Dockerfile
+    image: rpc-gateway-kong:${KONG_VERSION:-3.6}
     container_name: kong
     depends_on:
       kong-database:
@@ -60,6 +63,8 @@ services:
       KONG_STATUS_LISTEN: 0.0.0.0:8100
       KONG_ADMIN_GUI_AUTH: basic-auth
       KONG_ADMIN_GUI_SESSION_CONF: '{"secret":"${KONG_ADMIN_SESSION_SECRET:-secret}","storage":"kong","cookie_secure":false}'
+      # Custom plugins
+      KONG_PLUGINS: bundled,unkey-auth
       # OpenTelemetry configuration
       KONG_TRACING_INSTRUMENTATIONS: all
       KONG_TRACING_SAMPLING_RATE: ${KONG_TRACING_RATE:-1.0}
