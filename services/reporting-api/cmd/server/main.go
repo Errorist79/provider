@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/config"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/handlers"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/middleware"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/repository"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/config"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/handlers"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/middleware"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/repository"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )

@@ -1,0 +1,9 @@
+# Binaries
+bin/
+*.exe
+*.test
+*.out
+
+# Go build cache
+/build/
+/dist/

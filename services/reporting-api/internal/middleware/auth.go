@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/config"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/config"
 )
 
 // AuthMiddleware provides simple API key authentication for Phase 6

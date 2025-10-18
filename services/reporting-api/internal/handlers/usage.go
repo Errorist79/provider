@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/repository"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/repository"
 )
 
 type UsageHandler struct {

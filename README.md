@@ -8,6 +8,7 @@ This project provides a complete infrastructure stack for running a multi-tenant
 
 - **Kong Gateway (OSS)**: High-performance API gateway with routing, rate limiting, and authentication
 - **Unkey**: Self-hosted API key lifecycle management with mTLS security
+- **Auth Bridge**: Dedicated verification adapter that enriches requests with Unkey metadata
 - **PostgreSQL**: Transactional database for organizations, users, plans, subscriptions, and billing
 - **ClickHouse**: High-performance analytics database for request logs and usage metrics
 - **Redis**: Distributed cache for API key verification and rate limit state
@@ -32,7 +33,7 @@ This project provides a complete infrastructure stack for running a multi-tenant
 - **Dynamic Rate Limiting**: Plan-based limits (Free: 100/min, Basic: 1k/min, Pro: 10k/min, Enterprise: 100k/min)
 - **Compute Units**: Method-based cost calculation (eth_blockNumber=1 CU, debug_traceTransaction=50 CU)
 - **Plan Enforcement**: Archive/trace methods restricted to appropriate plans
-- **Authentication**: Unkey-powered API key verification with Redis caching
+- **Authentication**: Auth Bridge service verifies Unkey keys with Redis-backed caching
 - **CORS Support**: Configurable cross-origin resource sharing
 - **Metrics & Monitoring**: Real-time rate limit monitoring with Prometheus alerts
 - **Request Logging**: Detailed request logs with sensitive data redaction
@@ -63,7 +64,7 @@ Client Request
     ↓
 Kong Gateway (8000)
     ├─ Extract API key from URL path
-    ├─ Verify with Unkey (cached in Redis)
+    ├─ Verify via Auth Bridge (Unkey + Redis cache)
     ├─ Apply rate limiting (plan-based)
     ├─ Route to upstream RPC node
     └─ Log to ClickHouse via OTel
@@ -79,6 +80,7 @@ Kong Gateway (8000)
 | Unkey | 3001 | API key management |
 | PostgreSQL | 5432 | Application database |
 | Redis | 6379 | Cache layer |
+| Auth Bridge | 8081 | Unkey verification adapter |
 | ClickHouse | 8123, 9000 | Analytics database |
 | Prometheus | 9090 | Metrics collection |
 | Grafana | 3000 | Dashboards |

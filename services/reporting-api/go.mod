@@ -1,4 +1,4 @@
-module github.com/hoodrun/rpc-gateway/reporting-api
+module github.com/hoodrunio/rpc-gateway/reporting-api
 
 go 1.21
 

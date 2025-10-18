@@ -7,8 +7,8 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/config"
-	"github.com/hoodrun/rpc-gateway/reporting-api/internal/models"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/config"
+	"github.com/hoodrunio/rpc-gateway/reporting-api/internal/models"
 )
 
 type ClickHouseRepository struct {

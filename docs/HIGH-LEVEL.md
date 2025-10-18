@@ -28,7 +28,7 @@ It integrates **multi-chain RPC routing**, **API key management**, **rate-limiti
 
 ### **Auth & Key Layer**
 - **Unkey Service** → Sole API key store (create, revoke, verify, policy).  
-- **Auth Bridge** → Stateless adapter between Kong and Unkey, enriching requests with `identityId`, `plan`, and `scopes`.  
+- **Auth Bridge** → Stateless Go service (`services/auth-bridge`) sitting between Kong and Unkey, caching verification results in Redis and enriching requests with `identityId`, `plan`, and `scopes`.  
 - **Redis Cache** → 30–60s TTL cache for Unkey verify results + revoke-webhook purge.
 
 ### **Telemetry & Data Layer**
