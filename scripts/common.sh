@@ -3,6 +3,8 @@
 
 ADMIN="${KONG_ADMIN_URL:-http://localhost:8001}"
 PROXY="${KONG_PROXY_URL:-http://localhost:8000}"
+UNKEY_API="${UNKEY_BASE_URL:-http://localhost:3001}"
+AUTH_BRIDGE="${AUTH_BRIDGE_URL:-http://localhost:8081}"
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -22,44 +24,22 @@ check_service() {
         success "$service is running"
         return 0
     else
-        error "$service is not accessible at $url"
+        warn "$service is not accessible at $url"
         return 1
     fi
 }
 
 check_kong_health() {
     info "Checking Kong status..."
-    check_service "Kong" "$ADMIN/"
+    check_service "Kong Admin API" "$ADMIN/status"
 }
 
-add_route_plugins() {
-    local route_id=$1
+check_unkey_health() {
+    info "Checking Unkey status..."
+    check_service "Unkey API" "$UNKEY_API/v2/liveness"
+}
 
-    # 1. Pre-function: Unkey verification
-    local UNKEY_LUA=$(cat "$(dirname "$0")/../config/kong-unkey-prefunction.lua" | sed 's/"/\\"/g' | tr '\n' ' ')
-
-    # 2. Pre-function: Rate limit logic
-    local RATELIMIT_LUA=$(cat "$(dirname "$0")/../config/kong-rate-limit-prefunction.lua" | sed 's/"/\\"/g' | tr '\n' ' ')
-
-    # Add pre-function with both scripts
-    curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
-        -H 'Content-Type: application/json' \
-        -d "{\"name\":\"pre-function\",\"config\":{\"access\":[\"$UNKEY_LUA\",\"$RATELIMIT_LUA\"]}}" | jq -r '.name // "exists"'
-
-    # Rate limiting plugin - will use limits set by pre-function
-    # Using local policy for simplicity (can switch to redis for distributed)
-    curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
-        -d 'name=rate-limiting' \
-        -d 'config.minute=10000' \
-        -d 'config.policy=local' \
-        -d 'config.limit_by=consumer' \
-        -d 'config.fault_tolerant=true' | jq -r '.name // "exists"'
-
-    # CORS
-    curl -sf -X POST "$ADMIN/routes/$route_id/plugins" \
-        -d 'name=cors' \
-        -d 'config.origins[]=*' \
-        -d 'config.methods[]=GET' \
-        -d 'config.methods[]=POST' \
-        -d 'config.methods[]=OPTIONS' | jq -r '.name // "exists"'
+check_auth_bridge_health() {
+    info "Checking Auth Bridge status..."
+    check_service "Auth Bridge" "$AUTH_BRIDGE/health"
 }
