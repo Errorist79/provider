@@ -325,6 +325,8 @@ services:
       AUTH_BRIDGE_CACHE_TTL: 60s
       AUTH_BRIDGE_CACHE_REDIS_ADDR: redis:6379
       AUTH_BRIDGE_CACHE_REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass}
+    ports:
+      - "${AUTH_BRIDGE_PORT:-8081}:8081"
     networks:
       - rpc-gateway-net
     restart: unless-stopped
